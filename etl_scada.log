@@ -1,0 +1,14 @@
+2025-07-03 09:01:21,015 INFO:Funci�n 'importar_valores_scada_desde_sqlserver' ejecutada en 34.63 segundos.
+2025-07-03 09:01:23,008 INFO:Funci�n 'completar_minutos_faltantes_scadatemporal' ejecutada en 1.99 segundos.
+2025-07-03 09:01:23,360 INFO:Funci�n 'exportar_scadatemporal_a_sqlserver' ejecutada en 0.35 segundos.
+2025-07-03 09:01:24,184 INFO:Funci�n 'comparar_scadatemporal_con_sqlserver' ejecutada en 0.82 segundos.
+
+
+2025-07-03 09:14:45,189 INFO:Funci�n 'importar_valores_scada_desde_sqlserver' ejecutada en 0.58 segundos.
+2025-07-03 09:14:47,195 INFO:Funci�n 'completar_minutos_faltantes_scadatemporal' ejecutada en 2.01 segundos.
+2025-07-03 09:14:48,342 INFO:Funci�n 'exportar_scadatemporal_a_sqlserver' ejecutada en 1.15 segundos.
+2025-07-03 09:14:52,150 INFO:Funci�n 'comparar_scadatemporal_con_sqlserver' ejecutada en 3.81 segundos.
+
+
+11520 parametro de veces 
+
