@@ -1,14 +1,17 @@
 import pandas as pd
-from master.models import Homologacion, Nivel, Central, ScadaTemporal
+from master.models import Homologacion, Nivel, Central, ScadaTemporal, ETLProcessState, ETLProcessLog
 import pyodbc
 from django.conf import settings
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db.models import Min, Max
 from datetime import timedelta
 import logging
 import time
 from collections import defaultdict
+from zoneinfo import ZoneInfo
+from bisect import bisect_left
+from django.db import transaction
 
 
 def importar_tag_sro_a_homologacion(ruta_archivo):
@@ -76,7 +79,7 @@ def crear_tabla_sqlserver_con_cabeceras():
         columnas = [col.replace(' ', '_') for col in columnas]
 
         # Agrega la columna timestamp al inicio
-        columnas_sql = '[timestamp] DATETIME, ' + ', '.join([f'[{col}] NVARCHAR(MAX)' for col in columnas])
+        columnas_sql = '[timestamp] DATETIME, ' + ', '.join([f'[{col}] DECIMAL(10, 3)' for col in columnas])
         sql = f"CREATE TABLE [{nombre_tabla}] ({columnas_sql});"
 
         conn_str = (
@@ -96,14 +99,11 @@ def crear_tabla_sqlserver_con_cabeceras():
 
 
 
-def importar_valores_scada_desde_sqlserver():
+def importar_valores_scada_desde_sqlserver(fecha_inicio, fecha_fin):
     """
     Extrae los id_scada activos de Homologacion, consulta en SQL Server por esos IDs
     con Quality=192 y TimeStamp en el rango dado, y guarda los resultados en ScadaTemporal.
     """
-    fecha_inicio = datetime(2025, 6, 1, 7, 27, 0)
-    fecha_fin = datetime(2025, 6, 1, 7, 45, 59)
-
     # 1. Obtener los id_scada activos
     homologaciones = Homologacion.objects.filter(estado=True)
     ids_scada = list(homologaciones.values_list('id_scada', flat=True))
@@ -150,6 +150,7 @@ def importar_valores_scada_desde_sqlserver():
                 id_scada=row.ID,
                 cabecera_cmd=Homologacion.objects.get(id_scada=row.ID).cabecera_cmd,
                 timestamp=timezone.make_aware(minuto),
+                timestamp_utc=timezone.make_aware(minuto.replace(tzinfo=ZoneInfo('America/Lima'))),
                 valor=float(str(row.Value).replace(',', '.')),
                 nivel=nivel,
 
@@ -158,14 +159,11 @@ def importar_valores_scada_desde_sqlserver():
     conn.close()
 
 
-def completar_minutos_faltantes_scadatemporal():
+def completar_minutos_faltantes_scadatemporal(fecha_inicio, fecha_fin):
     """
     Para cada id_scada en ScadaTemporal, verifica si hay un registro por minuto en el intervalo dado.
     Si faltan minutos, interpola linealmente el valor y crea el registro faltante.
     """
-
-    fecha_inicio = datetime(2025, 6, 1, 7, 27, 0)
-    fecha_fin = datetime(2025, 6, 1, 7, 45, 59)
 
     ids = ScadaTemporal.objects.filter(timestamp__range=(fecha_inicio, fecha_fin)).values_list('id_scada', flat=True).distinct()
     for id_scada in ids:
@@ -204,12 +202,16 @@ def completar_minutos_faltantes_scadatemporal():
                         cabecera_cmd=prev.cabecera_cmd,
                         valor=valor_interp,
                         timestamp=t_actual,
-                        nivel=prev.nivel
+                        timestamp_utc=t_actual - timedelta(hours=5),
+                        nivel=prev.nivel,
+                        tipo='2'
                     )
             t_actual += timedelta(minutes=1)
+    # Eliminar los booleanos que se hayan interpolado
+    ScadaTemporal.objects.filter(tipo='2', cabecera_cmd__in=Homologacion.objects.filter(tipo='2').values_list('cabecera_cmd', flat=True)).delete()
+            
 
-
-def exportar_scadatemporal_a_sqlserver():
+def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     """
     Exporta los datos de ScadaTemporal a las tablas correspondientes en la base de datos SCADA en SQL Server.
     Cada tabla tiene una columna 'timestamp' y columnas por cada cabecera_cmd.
@@ -235,12 +237,12 @@ def exportar_scadatemporal_a_sqlserver():
         nombre_tabla = 'CMD' + central.descripcion.replace(' ', '_')
         # Obtener todos los registros de ScadaTemporal para esta central
         niveles = Nivel.objects.filter(central=central)
-        registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp')
+        registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp_utc')
 
         # Agrupar por timestamp
         datos_por_minuto = {}
         for reg in registros:
-            minuto = reg.timestamp.replace(second=0, microsecond=0)
+            minuto = reg.timestamp_utc.replace(second=0, microsecond=0)
             if minuto not in datos_por_minuto:
                 datos_por_minuto[minuto] = {}
             datos_por_minuto[minuto][reg.cabecera_cmd.replace(' ', '_')] = reg.valor
@@ -264,12 +266,11 @@ def exportar_scadatemporal_a_sqlserver():
     conn.close()
 
 
-def comparar_scadatemporal_con_sqlserver():
+def comparar_scadatemporal_con_sqlserver(fecha_inicio, fecha_fin):
     """
     Compara los datos de ScadaTemporal con las tablas de SQL Server.
-    Si encuentra diferencias, las registra en un archivo log.
+    Si encuentra diferencias (considerando solo hasta 3 decimales), las registra en un archivo log.
     """
-    # Configurar logging
     logging.basicConfig(filename='comparacion_scada.log', level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
 
@@ -291,13 +292,13 @@ def comparar_scadatemporal_con_sqlserver():
     for central in centrales:
         nombre_tabla = 'CMD' + central.descripcion.replace(' ', '_')
         niveles = Nivel.objects.filter(central=central)
-        registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp')
+        registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp_utc')
 
         cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True).values_list('cabecera_cmd', flat=True)
         cabeceras = [c.replace(' ', '_') for c in cabeceras]
 
         for reg in registros:
-            minuto = reg.timestamp.replace(second=0, microsecond=0)
+            minuto = reg.timestamp_utc.replace(second=0, microsecond=0)
             columna = reg.cabecera_cmd.replace(' ', '_')
             if columna not in cabeceras:
                 continue  # Solo compara columnas válidas
@@ -308,14 +309,20 @@ def comparar_scadatemporal_con_sqlserver():
             row = cursor.fetchone()
             valor_sql = row[0] if row else None
 
-            # Compara valores (considera None y float)
+            # Compara valores hasta 3 decimales
             valor_django = reg.valor
             try:
                 valor_sql_float = float(str(valor_sql).replace(',', '.')) if valor_sql is not None else None
             except Exception:
                 valor_sql_float = None
 
-            if valor_sql_float != valor_django:
+            iguales = False
+            if valor_sql_float is None and valor_django is None:
+                iguales = True
+            elif valor_sql_float is not None and valor_django is not None:
+                iguales = round(valor_sql_float, 3) == round(valor_django, 3)
+
+            if not iguales:
                 logging.info(
                     f"Diferencia en {nombre_tabla} - timestamp: {minuto}, columna: {columna}, "
                     f"Django: {valor_django}, SQLServer: {valor_sql_float}"
@@ -331,20 +338,24 @@ def ejecutar_proceso_etl_completo():
     Ejecuta el proceso ETL completo y mide el tiempo de ejecución de cada función,
     registrando los tiempos en un archivo de log.
     """
+    
+    fecha_inicio = datetime(2024, 7, 1, 5, 0, 0)
+    fecha_fin = datetime(2024, 7, 2, 4, 59, 59)
+
     logging.basicConfig(filename='etl_scada.log', level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
 
     funciones = [
         ('importar_valores_scada_desde_sqlserver', importar_valores_scada_desde_sqlserver2),
-        ('completar_minutos_faltantes_scadatemporal', completar_minutos_faltantes_scadatemporal),
+        ('completar_minutos_faltantes_scadatemporal', completar_minutos_faltantes_scadatemporal2),
         ('exportar_scadatemporal_a_sqlserver', exportar_scadatemporal_a_sqlserver),
-        ('comparar_scadatemporal_con_sqlserver', comparar_scadatemporal_con_sqlserver),
+        ('comparar_scadatemporal_con_sqlserver', comparar_scadatemporal_con_sqlserver2),
     ]
 
     for nombre, funcion in funciones:
         inicio = time.time()
         try:
-            funcion()
+            funcion(fecha_inicio, fecha_fin)
             duracion = time.time() - inicio
             logging.info(f"Función '{nombre}' ejecutada en {duracion:.2f} segundos.")
         except Exception as e:
@@ -352,9 +363,7 @@ def ejecutar_proceso_etl_completo():
 
 
 
-def importar_valores_scada_desde_sqlserver2():
-    fecha_inicio = datetime(2025, 6, 1, 7, 27, 0)
-    fecha_fin = datetime(2025, 6, 1, 7, 45, 59)
+def importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin):
 
     homologaciones = Homologacion.objects.filter(estado=True)
     ids_scada = list(homologaciones.values_list('id_scada', flat=True))
@@ -406,6 +415,7 @@ def importar_valores_scada_desde_sqlserver2():
                 timestamp=timezone.make_aware(minuto),
                 valor=float(str(row.Value).replace(',', '.')),
                 nivel=niveles[id_scada],
+                timestamp_utc=minuto - timedelta(hours=5),
             )
         )
     if objetos:
@@ -413,3 +423,293 @@ def importar_valores_scada_desde_sqlserver2():
 
     cursor.close()
     conn.close()
+
+
+def limpiar_scadatemporal_y_sqlserver():
+    """
+    Elimina todos los registros de ScadaTemporal y restablece su secuencia a 1.
+    Hace lo mismo para todas las tablas CMD* en SQL Server.
+    """
+    from django.db import connection
+
+    # Limpiar ScadaTemporal y resetear secuencia (para PostgreSQL y MySQL)
+    ScadaTemporal.objects.all().delete()
+    with connection.cursor() as cursor:
+        # Para PostgreSQL
+        try:
+            cursor.execute("ALTER SEQUENCE master_scadatemporal_id_seq RESTART WITH 1;")
+        except Exception:
+            pass
+        # Para MySQL
+        try:
+            cursor.execute("ALTER TABLE master_scadatemporal AUTO_INCREMENT = 1;")
+        except Exception:
+            pass
+
+    # Limpiar tablas CMD* en SQL Server
+    db_settings = settings.DATABASES['default']
+    server = 'DESKTOP-0SI1RPI'
+    database = 'scada'
+    username = 'root'
+    password = 'wolf_4030'
+
+    conn_str = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    # Buscar todas las tablas que empiezan con CMD
+    cursor.execute("""
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE 'CMD%'
+    """)
+    tablas = [row[0] for row in cursor.fetchall()]
+
+    for tabla in tablas:
+        try:
+            cursor.execute(f"TRUNCATE TABLE [{tabla}]")
+            # Si hay un campo IDENTITY, reiniciar el contador
+            cursor.execute(f"DBCC CHECKIDENT ('{tabla}', RESEED, 0)")
+        except Exception as e:
+            print(f"Error limpiando {tabla}: {e}")
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+
+def limpiar_historicaldata_ids_no_homologados():
+    """
+    Elimina los registros de dbo.HistoricalData en SQL Server donde ID no está en la tabla Homologacion con estado=True.
+    """
+    # Obtener los id_scada activos de Homologacion
+    ids_validos = list(Homologacion.objects.filter(estado=True).values_list('id_scada', flat=True))
+    if not ids_validos:
+        print("No hay id_scada activos.")
+        return
+
+    db_settings = settings.DATABASES['default']
+    server = 'DESKTOP-0SI1RPI'
+    database = 'OPCUAs60Mini'
+    username = 'root'
+    password = 'wolf_4030'
+
+    conn_str = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    # Construir la lista de IDs para la consulta SQL
+    # Si hay muchos IDs, considera hacer la operación en bloques
+    ids_validos_str = ','.join(f"'{id_}'" for id_ in ids_validos)
+    sql = f"DELETE FROM dbo.HistoricalData WHERE ID NOT IN ({ids_validos_str})"
+
+    try:
+        cursor.execute(sql)
+        conn.commit()
+        print("Registros eliminados correctamente de dbo.HistoricalData.")
+    except Exception as e:
+        print(f"Error eliminando registros: {e}")
+
+    cursor.close()
+    conn.close()
+
+
+def completar_minutos_faltantes_scadatemporal2(fecha_inicio, fecha_fin):
+    """
+    Optimizada: Interpola minutos faltantes en memoria y usa bulk_create.
+    """
+    ids = ScadaTemporal.objects.filter(
+        timestamp__range=(fecha_inicio, fecha_fin)
+    ).values_list('id_scada', flat=True).distinct()
+
+    for id_scada in ids:
+        registros = list(
+            ScadaTemporal.objects.filter(
+                id_scada=id_scada,
+                timestamp__range=(fecha_inicio, fecha_fin)
+            ).order_by('timestamp')
+        )
+        if not registros:
+            continue
+
+        # Lista de minutos existentes y sus valores
+        minutos_existentes = [r.timestamp.replace(second=0, microsecond=0) for r in registros]
+        valores_existentes = [r.valor for r in registros]
+        registros_dict = {r.timestamp.replace(second=0, microsecond=0): r for r in registros}
+
+        # Rango de minutos a revisar
+        t_actual = timezone.make_aware(fecha_inicio.replace(second=0, microsecond=0))
+        t_final = timezone.make_aware(fecha_fin.replace(second=0, microsecond=0))
+
+        nuevos = []
+        while t_actual <= t_final:
+            if t_actual not in registros_dict:
+                # Buscar posición para interpolar usando bisect
+                idx = bisect_left(minutos_existentes, t_actual)
+                if 0 < idx < len(minutos_existentes):
+                    prev = registros_dict[minutos_existentes[idx - 1]]
+                    next_ = registros_dict[minutos_existentes[idx]]
+                    total_secs = (next_.timestamp - prev.timestamp).total_seconds()
+                    if total_secs == 0:
+                        valor_interp = prev.valor
+                    else:
+                        secs_to_t = (t_actual - prev.timestamp).total_seconds()
+                        valor_interp = prev.valor + (next_.valor - prev.valor) * (secs_to_t / total_secs)
+                    nuevos.append(
+                        ScadaTemporal(
+                            id_scada=id_scada,
+                            cabecera_cmd=prev.cabecera_cmd,
+                            valor=valor_interp,
+                            timestamp=t_actual,
+                            timestamp_utc=t_actual - timedelta(hours=5),
+                            nivel=prev.nivel,
+                            tipo='2'
+                        )
+                    )
+            t_actual += timedelta(minutes=1)
+
+        # Bulk create para eficiencia
+        if nuevos:
+            with transaction.atomic():
+                ScadaTemporal.objects.bulk_create(nuevos, batch_size=1000)
+
+    # Eliminar los booleanos que se hayan interpolado
+    ScadaTemporal.objects.filter(
+        tipo='2',
+        cabecera_cmd__in=Homologacion.objects.filter(tipo='2').values_list('cabecera_cmd', flat=True)
+    ).delete()
+
+
+def comparar_scadatemporal_con_sqlserver2(fecha_inicio, fecha_fin):
+    """
+    Compara los datos de ScadaTemporal con las tablas de SQL Server.
+    Si encuentra diferencias mayores a 0.005, las registra en un archivo log.
+    """
+    logging.basicConfig(filename='comparacion_scada.log', level=logging.INFO, 
+                        format='%(asctime)s %(levelname)s:%(message)s')
+
+    db_settings = settings.DATABASES['default']
+    server = 'DESKTOP-0SI1RPI'
+    database = 'scada'
+    username = 'root'
+    password = 'wolf_4030'
+
+    conn_str = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    centrales = Central.objects.filter(estado=True)
+
+    for central in centrales:
+        nombre_tabla = 'CMD' + central.descripcion.replace(' ', '_')
+        niveles = Nivel.objects.filter(central=central)
+        registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp_utc')
+
+        cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True).values_list('cabecera_cmd', flat=True)
+        cabeceras = [c.replace(' ', '_') for c in cabeceras]
+
+        for reg in registros:
+            minuto = reg.timestamp_utc.replace(second=0, microsecond=0)
+            columna = reg.cabecera_cmd.replace(' ', '_')
+            if columna not in cabeceras:
+                continue  # Solo compara columnas válidas
+
+            # Consulta el valor en SQL Server
+            sql = f"SELECT [{columna}] FROM [{nombre_tabla}] WHERE [timestamp]=?"
+            cursor.execute(sql, minuto)
+            row = cursor.fetchone()
+            valor_sql = row[0] if row else None
+
+            valor_django = reg.valor
+            try:
+                valor_sql_float = float(str(valor_sql).replace(',', '.')) if valor_sql is not None else None
+            except Exception:
+                valor_sql_float = None
+
+            diferencia = None
+            iguales = False
+            if valor_sql_float is None and valor_django is None:
+                iguales = True
+            elif valor_sql_float is not None and valor_django is not None:
+                diferencia = abs(valor_sql_float - valor_django)
+                iguales = diferencia <= 0.005
+
+            if not iguales:
+                logging.info(
+                    f"Diferencia en {nombre_tabla} - timestamp: {minuto}, columna: {columna}, "
+                    f"Django: {valor_django}, SQLServer: {valor_sql_float}, Diferencia: {diferencia}"
+                )
+
+    cursor.close()
+    conn.close()
+
+
+def ejecutar_etl_secuencial():
+    """
+    Ejecuta secuencialmente las etapas del ETL por día.
+    Solo se ejecuta si existe un registro activo en ETLProcessState.
+    Si ya se está ejecutando, no hace nada.
+    Registra logs de inicio y fin de cada ejecución diaria.
+    """
+    with transaction.atomic():
+        try:
+            estado = ETLProcessState.objects.select_for_update().get(completado=False)
+        except ETLProcessState.DoesNotExist:
+            # No hay proceso activo, no ejecutar nada
+            return
+        if estado.en_ejecucion or estado.completado:
+            # Ya se está ejecutando o ya terminó
+            return
+        estado.en_ejecucion = True
+        estado.save()
+
+    log = ETLProcessLog.objects.create(
+        fecha=estado.dia_actual,
+        etapa=estado.etapa,
+        mensaje="Inicio de ejecución"
+    )
+
+    try:
+        etapas = [
+            ('importar', importar_valores_scada_desde_sqlserver2),
+            ('completar', completar_minutos_faltantes_scadatemporal2),
+            ('exportar', exportar_scadatemporal_a_sqlserver),
+        ]
+        etapa_idx = [e[0] for e in etapas].index(estado.etapa)
+        funcion = etapas[etapa_idx][1]
+
+        fecha_inicio = datetime.combine(estado.dia_actual, datetime.min.time())
+        fecha_fin = fecha_inicio + timedelta(days=1) - timedelta(seconds=1)
+        funcion(fecha_inicio, fecha_fin)
+
+        # Avanzar al siguiente día o etapa
+        if estado.dia_actual < estado.fecha_fin:
+            estado.dia_actual += timedelta(days=1)
+        else:
+            if etapa_idx < len(etapas) - 1:
+                estado.etapa = etapas[etapa_idx + 1][0]
+                estado.dia_actual = estado.fecha_inicio
+            else:
+                estado.completado = True  # Proceso terminado
+
+        log.exito = True
+        log.mensaje = "Ejecución finalizada correctamente"
+    except Exception as e:
+        log.exito = False
+        log.mensaje = f"Error: {str(e)}"
+        raise
+    finally:
+        log.fin = datetime.now()
+        log.save()
+        # Liberar el flag de ejecución
+        estado.en_ejecucion = False
+        estado.save()
