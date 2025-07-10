@@ -552,28 +552,32 @@ def limpiar_historicaldata_ids_no_homologados():
 
 def completar_minutos_faltantes_scadatemporal2(fecha_inicio, fecha_fin):
     """
-    Optimizada: Interpola minutos faltantes en memoria y usa bulk_create.
+    Interpola minutos faltantes en memoria y usa bulk_create.
+    Busca hasta 2 días previos y posteriores para interpolar los extremos.
+    Si no encuentra, deja el valor en blanco.
     """
     ids = ScadaTemporal.objects.filter(
         timestamp__range=(fecha_inicio, fecha_fin)
     ).values_list('id_scada', flat=True).distinct()
 
     for id_scada in ids:
-        registros = list(
+        # Buscar registros en el rango extendido para los extremos
+        rango_extendido_inicio = fecha_inicio - timedelta(days=2)
+        rango_extendido_fin = fecha_fin + timedelta(days=2)
+        registros_ext = list(
             ScadaTemporal.objects.filter(
                 id_scada=id_scada,
-                timestamp__range=(fecha_inicio, fecha_fin)
+                timestamp__range=(rango_extendido_inicio, rango_extendido_fin)
             ).order_by('timestamp')
         )
-        if not registros:
+        if not registros_ext:
             continue
 
         # Lista de minutos existentes y sus valores
-        minutos_existentes = [r.timestamp.replace(second=0, microsecond=0) for r in registros]
-        valores_existentes = [r.valor for r in registros]
-        registros_dict = {r.timestamp.replace(second=0, microsecond=0): r for r in registros}
+        minutos_existentes = [r.timestamp.replace(second=0, microsecond=0) for r in registros_ext]
+        registros_dict = {r.timestamp.replace(second=0, microsecond=0): r for r in registros_ext}
 
-        # Rango de minutos a revisar
+        # Rango de minutos a revisar (solo el rango solicitado)
         t_actual = timezone.make_aware(fecha_inicio.replace(second=0, microsecond=0))
         t_final = timezone.make_aware(fecha_fin.replace(second=0, microsecond=0))
 
@@ -582,9 +586,34 @@ def completar_minutos_faltantes_scadatemporal2(fecha_inicio, fecha_fin):
             if t_actual not in registros_dict:
                 # Buscar posición para interpolar usando bisect
                 idx = bisect_left(minutos_existentes, t_actual)
+                prev = None
+                next_ = None
                 if 0 < idx < len(minutos_existentes):
                     prev = registros_dict[minutos_existentes[idx - 1]]
                     next_ = registros_dict[minutos_existentes[idx]]
+                elif idx == 0 and len(minutos_existentes) > 1:
+                    # Solo hay siguiente, buscar hasta 2 días después
+                    next_ = registros_dict[minutos_existentes[0]]
+                    # Buscar previo hasta 2 días antes
+                    prevs = ScadaTemporal.objects.filter(
+                        id_scada=id_scada,
+                        timestamp__lt=minutos_existentes[0],
+                        timestamp__gte=rango_extendido_inicio
+                    ).order_by('-timestamp')
+                    if prevs.exists():
+                        prev = prevs.first()
+                elif idx == len(minutos_existentes):
+                    # Solo hay previo, buscar hasta 2 días después
+                    prev = registros_dict[minutos_existentes[-1]]
+                    nexts = ScadaTemporal.objects.filter(
+                        id_scada=id_scada,
+                        timestamp__gt=minutos_existentes[-1],
+                        timestamp__lte=rango_extendido_fin
+                    ).order_by('timestamp')
+                    if nexts.exists():
+                        next_ = nexts.first()
+
+                if prev and next_:
                     total_secs = (next_.timestamp - prev.timestamp).total_seconds()
                     if total_secs == 0:
                         valor_interp = prev.valor
@@ -602,18 +631,13 @@ def completar_minutos_faltantes_scadatemporal2(fecha_inicio, fecha_fin):
                             tipo='2'
                         )
                     )
+                # Si no hay ambos extremos, no interpola (deja en blanco)
             t_actual += timedelta(minutes=1)
 
         # Bulk create para eficiencia
         if nuevos:
             with transaction.atomic():
                 ScadaTemporal.objects.bulk_create(nuevos, batch_size=1000)
-
-    # Eliminar los booleanos que se hayan interpolado
-    ScadaTemporal.objects.filter(
-        tipo='2',
-        cabecera_cmd__in=Homologacion.objects.filter(tipo='2').values_list('cabecera_cmd', flat=True)
-    ).delete()
 
 
 def comparar_scadatemporal_con_sqlserver2(fecha_inicio, fecha_fin):
