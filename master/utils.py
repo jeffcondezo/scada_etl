@@ -66,11 +66,12 @@ def crear_tabla_sqlserver_con_cabeceras():
     Obtiene los datos de conexión desde settings.py.
     """
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
-    database = 'scada'
-    username = 'root'
-    password = 'wolf_4030'
 
+    server = '192.168.15.200,56382'
+    database = 'CMD'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
+    
     central = Central.objects.all()
 
     for c in central:
@@ -83,9 +84,14 @@ def crear_tabla_sqlserver_con_cabeceras():
         sql = f"CREATE TABLE [{nombre_tabla}] ({columnas_sql});"
 
         conn_str = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+            "DRIVER={ODBC Driver 18 for SQL Server};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
+            f"UID={username};"
+            f"PWD={password};"
+            "TrustServerCertificate=Yes;"
         )
+
         try:
             conn = pyodbc.connect(conn_str)
             cursor = conn.cursor()
@@ -115,14 +121,19 @@ def importar_valores_scada_desde_sqlserver(fecha_inicio, fecha_fin):
 
     # 2. Conexión a SQL Server
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
+
+    server = '192.168.15.200,56382'
     database = 'OPCUAs60Mini'
-    username = 'root'
-    password = 'wolf_4030'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
 
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
@@ -218,14 +229,18 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     """
     # Conexión a SQL Server
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
-    database = 'scada'
-    username = 'root'
-    password = 'wolf_4030'
+    server = '192.168.15.200,56382'
+    database = 'CMD'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
 
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
@@ -275,14 +290,18 @@ def comparar_scadatemporal_con_sqlserver(fecha_inicio, fecha_fin):
                         format='%(asctime)s %(levelname)s:%(message)s')
 
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
-    database = 'scada'
-    username = 'root'
-    password = 'wolf_4030'
+    server = '192.168.15.200,56382'
+    database = 'CMD'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
 
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
@@ -375,14 +394,18 @@ def importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin):
     cabeceras = {h.id_scada: h.cabecera_cmd for h in homologaciones}
 
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
+    server = '192.168.15.200,56382'
     database = 'OPCUAs60Mini'
-    username = 'root'
-    password = 'wolf_4030'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
 
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
@@ -448,14 +471,17 @@ def limpiar_scadatemporal_y_sqlserver():
 
     # Limpiar tablas CMD* en SQL Server
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
-    database = 'scada'
-    username = 'root'
-    password = 'wolf_4030'
-
+    server = '192.168.15.200,56382'
+    database = 'CMD'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
@@ -492,14 +518,18 @@ def limpiar_historicaldata_ids_no_homologados():
         return
 
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
+    server = '192.168.15.200,56382'
     database = 'OPCUAs60Mini'
-    username = 'root'
-    password = 'wolf_4030'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
 
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
@@ -595,14 +625,18 @@ def comparar_scadatemporal_con_sqlserver2(fecha_inicio, fecha_fin):
                         format='%(asctime)s %(levelname)s:%(message)s')
 
     db_settings = settings.DATABASES['default']
-    server = 'DESKTOP-0SI1RPI'
-    database = 'scada'
-    username = 'root'
-    password = 'wolf_4030'
+    server = '192.168.15.200,56382'
+    database = 'CMD'
+    username = 'consultor_cmd'
+    password = '6yc24JS5B'
 
     conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={server};DATABASE={database};UID={username};PWD={password}"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
     )
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
