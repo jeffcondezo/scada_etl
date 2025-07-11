@@ -224,10 +224,10 @@ def completar_minutos_faltantes_scadatemporal(fecha_inicio, fecha_fin):
 
 def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     """
-    Exporta los datos de ScadaTemporal a las tablas correspondientes en la base de datos SCADA en SQL Server.
+    Exporta solo los datos de ScadaTemporal del día proporcionado por los parámetros fecha_inicio y fecha_fin
+    a las tablas correspondientes en la base de datos SCADA en SQL Server.
     Cada tabla tiene una columna 'timestamp' y columnas por cada cabecera_cmd.
     """
-    # Conexión a SQL Server
     db_settings = settings.DATABASES['default']
     server = '192.168.15.200,56382'
     database = 'CMD'
@@ -245,16 +245,17 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
 
-    # Obtener todas las centrales
     centrales = Central.objects.filter(estado=True)
 
     for central in centrales:
         nombre_tabla = 'CMD' + central.descripcion.replace(' ', '_')
-        # Obtener todos los registros de ScadaTemporal para esta central
         niveles = Nivel.objects.filter(central=central)
-        registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp_utc')
+        # Solo filtra registros en el rango de fechas proporcionado
+        registros = ScadaTemporal.objects.filter(
+            nivel__in=niveles,
+            timestamp_utc__range=(fecha_inicio, fecha_fin)
+        ).order_by('timestamp_utc')
 
-        # Agrupar por timestamp
         datos_por_minuto = {}
         for reg in registros:
             minuto = reg.timestamp_utc.replace(second=0, microsecond=0)
@@ -262,7 +263,6 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
                 datos_por_minuto[minuto] = {}
             datos_por_minuto[minuto][reg.cabecera_cmd.replace(' ', '_')] = reg.valor
 
-        # Obtener todas las cabeceras para las columnas
         cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True).values_list('cabecera_cmd', flat=True)
         cabeceras = [c.replace(' ', '_') for c in cabeceras]
 
