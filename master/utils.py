@@ -226,7 +226,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     """
     Exporta solo los datos de ScadaTemporal del día proporcionado por los parámetros fecha_inicio y fecha_fin
     a las tablas correspondientes en la base de datos SCADA en SQL Server.
-    Cada tabla tiene una columna 'timestamp' y columnas por cada cabecera_cmd.
+    Si el registro con ese timestamp existe, actualiza los campos; si no existe, lo crea.
     """
     db_settings = settings.DATABASES['default']
     server = '192.168.15.200,56382'
@@ -250,7 +250,6 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     for central in centrales:
         nombre_tabla = 'CMD' + central.descripcion.replace(' ', '_')
         niveles = Nivel.objects.filter(central=central)
-        # Solo filtra registros en el rango de fechas proporcionado
         registros = ScadaTemporal.objects.filter(
             nivel__in=niveles,
             timestamp_utc__range=(fecha_inicio, fecha_fin)
@@ -267,14 +266,31 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
         cabeceras = [c.replace(' ', '_') for c in cabeceras]
 
         for minuto, valores in datos_por_minuto.items():
-            columnas = ['timestamp'] + cabeceras
-            valores_insert = [minuto] + [valores.get(c, None) for c in cabeceras]
-            placeholders = ','.join(['?'] * len(columnas))
-            sql = f"INSERT INTO [{nombre_tabla}] ({','.join('['+c+']' for c in columnas)}) VALUES ({placeholders})"
-            try:
-                cursor.execute(sql, *valores_insert)
-            except Exception as e:
-                print(f"Error insertando en {nombre_tabla} para {minuto}: {e}")
+            # Verifica si el registro existe
+            cursor.execute(f"SELECT COUNT(*) FROM [{nombre_tabla}] WHERE [timestamp]=?", minuto)
+            existe = cursor.fetchone()[0] > 0
+
+            columnas = cabeceras
+            valores_update = [valores.get(c, None) for c in columnas]
+
+            if existe:
+                # Actualiza solo los campos correspondientes
+                set_clause = ', '.join([f"[{col}]=?" for col in columnas])
+                sql = f"UPDATE [{nombre_tabla}] SET {set_clause} WHERE [timestamp]=?"
+                try:
+                    cursor.execute(sql, *valores_update, minuto)
+                except Exception as e:
+                    print(f"Error actualizando en {nombre_tabla} para {minuto}: {e}")
+            else:
+                # Inserta el registro nuevo
+                columnas_insert = ['timestamp'] + columnas
+                valores_insert = [minuto] + valores_update
+                placeholders = ','.join(['?'] * len(columnas_insert))
+                sql = f"INSERT INTO [{nombre_tabla}] ({','.join('['+c+']' for c in columnas_insert)}) VALUES ({placeholders})"
+                try:
+                    cursor.execute(sql, *valores_insert)
+                except Exception as e:
+                    print(f"Error insertando en {nombre_tabla} para {minuto}: {e}")
 
     conn.commit()
     cursor.close()
