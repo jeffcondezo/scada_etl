@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -90,3 +91,13 @@ class ETLProcessLog(models.Model):
 
     def __str__(self):
         return f"{self.etapa} - {self.fecha} - {'OK' if self.exito else 'ERROR'}"
+    
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    acceso_usuarios = models.BooleanField(default=False)
+    acceso_proceso_etl = models.BooleanField(default=False)
+    acceso_sensores = models.BooleanField(default=False)
+    acceso_configuracion = models.BooleanField(default=False)
+    bloqueado = models.BooleanField(default=False)  # Nuevo campo para bloqueo por intentos fallidos

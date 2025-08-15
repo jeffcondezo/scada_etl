@@ -12,6 +12,8 @@ from collections import defaultdict
 from zoneinfo import ZoneInfo
 from bisect import bisect_left
 from django.db import transaction
+from functools import wraps
+from django.http import HttpResponseForbidden
 
 
 def importar_tag_sro_a_homologacion(ruta_archivo):
@@ -787,3 +789,22 @@ def ejecutar_etl_secuencial():
         # Liberar el flag de ejecución
         estado.en_ejecucion = False
         estado.save()
+
+
+def acceso_modulo_requerido(nombre_modulo):
+    """
+    Decorador para validar acceso a un módulo según el campo booleano en el profile del usuario.
+    Ejemplo de uso:
+        @acceso_modulo_requerido('acceso_usuarios')
+        def usuarios_list(request):
+            ...
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if hasattr(request.user, 'profile') and getattr(request.user.profile, nombre_modulo, False):
+                return view_func(request, *args, **kwargs)
+            from django.shortcuts import redirect
+            return redirect('acceso_denegado')
+        return _wrapped_view
+    return decorator

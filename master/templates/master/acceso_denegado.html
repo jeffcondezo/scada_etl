@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso Denegado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 0; }
+        .sidebar { width: 220px; background: linear-gradient(135deg, #0075C9 0%, #82BC00 100%); color: #fff; height: 100vh; position: fixed; top: 0; left: 0; box-shadow: 2px 0 8px rgba(0,117,201,0.08); display: flex; flex-direction: column; justify-content: space-between; }
+        .sidebar h2 { text-align: center; margin: 32px 0 18px 0; font-size: 1.4em; font-weight: 700; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar ul li a { display: block; padding: 14px 28px; color: #fff; text-decoration: none; font-size: 1.08em; border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s; }
+        .sidebar ul li a:hover, .sidebar ul li.active a { background: #FF8300; border-left: 4px solid #fff; color: #fff; }
+        .sidebar-footer { text-align: center; padding: 18px 0; font-size: 0.95em; color: #FF8300; background: rgba(255,255,255,0.07); }
+        .main-content { margin-left: 220px; padding: 48px 60px 32px 60px; min-height: 100vh; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 36px; }
+        .user-info { color: #0075C9; font-weight: 600; font-size: 1.08em; display: flex; align-items: center; }
+        .user-avatar { width: 36px; height: 36px; background: #82BC00; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #fff; font-weight: bold; font-size: 1.1em; }
+        .logout-btn { background: #FF8300; color: #fff; border: none; padding: 9px 22px; border-radius: 5px; font-size: 1em; cursor: pointer; box-shadow: 0 2px 8px rgba(255,131,0,0.10); transition: background 0.2s; }
+        .logout-btn:hover { background: #d96c00; }
+        h1 { color: #FF8300; font-size:2em; margin-bottom:18px; }
+        .denied-box { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,117,201,0.07); padding: 32px 28px; max-width: 480px; margin: 60px auto 0 auto; text-align: center; }
+        .denied-icon { font-size: 3em; color: #FF8300; margin-bottom: 18px; }
+        .back-btn { background: #82BC00; color: #fff; border: none; padding: 8px 18px; border-radius: 5px; font-size: 1em; cursor: pointer; text-decoration: none; margin-top: 18px; display: inline-block; }
+        .back-btn:hover { background: #0075C9; }
+        @media (max-width: 700px) {
+            .main-content { padding: 24px 8px 16px 8px; }
+            .sidebar { width: 100%; height: auto; position: static; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <h2>ETL SCADA</h2>
+            <ul>
+            <li class="active"><a href="{% url 'home' %}">Inicio</a></li>
+            {% if user.profile.acceso_usuarios %}
+                <li><a href="/master/usuarios">Usuarios</a></li>
+            {% endif %}
+            {% if user.profile.acceso_proceso_etl %}
+                <li><a href="{% url 'etl_procesos_list' %}">Procesos ETL</a></li>
+            {% endif %}
+            {% if user.profile.acceso_sensores %}
+                <li><a href="{% url 'centrales_list' %}">Sensores</a></li>
+            {% endif %}
+            {% if user.profile.acceso_configuracion %}
+                <li><a href="{% url 'configuracion_list' %}">Configuración</a></li>
+            {% endif %}
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            &copy; {{ year|default:2025 }} Celepsa - Prayaga
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <div class="user-info">
+                <span class="user-avatar">{{ user.username|slice:":1"|upper }}</span>
+                Bienvenido, <strong>{{ user.username }}</strong>
+            </div>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Cerrar sesión</button>
+            </form>
+        </div>
+        <div class="denied-box">
+            <div class="denied-icon">🚫</div>
+            <h1>Acceso Denegado</h1>
+            <p>No tienes permisos para acceder a este módulo.</p>
+            <a href="{% url 'home' %}" class="back-btn">Volver al Panel</a>
+        </div>
