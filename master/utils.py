@@ -1059,4 +1059,4 @@ def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):
 
         if nuevos:
             with transaction.atomic():
-                ScadaTemporal.objects.bulk_create(nuevos,
+                ScadaTemporal.objects.bulk_create(nuevos, batch_size=1000)
