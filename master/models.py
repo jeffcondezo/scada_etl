@@ -101,3 +101,35 @@ class Profile(models.Model):
     acceso_sensores = models.BooleanField(default=False)
     acceso_configuracion = models.BooleanField(default=False)
     bloqueado = models.BooleanField(default=False)  # Nuevo campo para bloqueo por intentos fallidos
+    intentos = models.IntegerField(default=0)  # Nuevo campo para contar intentos fallidos
+
+
+class ETLProcessStateCron(models.Model):
+    ETAPAS = [
+        ('importar', 'Importar'),
+        ('completar', 'Completar'),
+        ('exportar', 'Exportar'),
+        ('comparar', 'Comparar'),
+    ]
+    fecha_hora_inicio = models.DateTimeField()
+    fecha_hora_fin = models.DateTimeField()
+    etapa = models.CharField(max_length=20, choices=ETAPAS)
+    dia = models.DateField()
+    completado = models.BooleanField(default=False)
+    en_ejecucion = models.BooleanField(default=False)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.etapa} - {self.dia_actual}"
+
+
+class ETLProcessLogCron(models.Model):
+    fecha_hora = models.DateTimeField()
+    etapa = models.CharField(max_length=20)
+    inicio = models.DateTimeField(auto_now_add=True)
+    fin = models.DateTimeField(null=True, blank=True)
+    exito = models.BooleanField(default=False)
+    mensaje = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.etapa} - {self.fecha} - {'OK' if self.exito else 'ERROR'}"

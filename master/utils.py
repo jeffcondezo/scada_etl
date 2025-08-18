@@ -1,5 +1,5 @@
 import pandas as pd
-from master.models import Homologacion, Nivel, Central, ScadaTemporal, ETLProcessState, ETLProcessLog
+from master.models import Homologacion, Nivel, Central, ScadaTemporal, ETLProcessState, ETLProcessLog, ETLProcessStateCron, ETLProcessLogCron, Parametro
 import pyodbc
 from django.conf import settings
 from datetime import datetime, timedelta
@@ -14,6 +14,7 @@ from bisect import bisect_left
 from django.db import transaction
 from functools import wraps
 from django.http import HttpResponseForbidden
+from django.utils.dateparse import parse_datetime
 
 
 def importar_tag_sro_a_homologacion(ruta_archivo):
@@ -67,13 +68,11 @@ def crear_tabla_sqlserver_con_cabeceras():
     y siempre agrega una columna adicional llamada 'timestamp'.
     Obtiene los datos de conexión desde settings.py.
     """
-    db_settings = settings.DATABASES['default']
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
-    server = '192.168.15.200,56382'
-    database = 'CMD'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
-    
     central = Central.objects.all()
 
     for c in central:
@@ -122,12 +121,10 @@ def importar_valores_scada_desde_sqlserver(fecha_inicio, fecha_fin):
         return
 
     # 2. Conexión a SQL Server
-    db_settings = settings.DATABASES['default']
-
-    server = '192.168.15.200,56382'
-    database = 'OPCUAs60Mini'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE_SCADA
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -230,11 +227,10 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     a las tablas correspondientes en la base de datos SCADA en SQL Server.
     Si el registro con ese timestamp existe, actualiza los campos; si no existe, lo crea.
     """
-    db_settings = settings.DATABASES['default']
-    server = '192.168.15.200,56382'
-    database = 'CMD'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -307,11 +303,10 @@ def comparar_scadatemporal_con_sqlserver(fecha_inicio, fecha_fin):
     logging.basicConfig(filename='comparacion_scada.log', level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
 
-    db_settings = settings.DATABASES['default']
-    server = '192.168.15.200,56382'
-    database = 'CMD'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -411,11 +406,10 @@ def importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin):
     niveles = {h.id_scada: h.nivel for h in homologaciones}
     cabeceras = {h.id_scada: h.cabecera_cmd for h in homologaciones}
 
-    db_settings = settings.DATABASES['default']
-    server = '192.168.15.200,56382'
-    database = 'OPCUAs60Mini'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE_SCADA
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -488,11 +482,11 @@ def limpiar_scadatemporal_y_sqlserver():
             pass
 
     # Limpiar tablas CMD* en SQL Server
-    db_settings = settings.DATABASES['default']
-    server = '192.168.15.200,56382'
-    database = 'CMD'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
+
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
         f"SERVER={server};"
@@ -535,11 +529,10 @@ def limpiar_historicaldata_ids_no_homologados():
         print("No hay id_scada activos.")
         return
 
-    db_settings = settings.DATABASES['default']
-    server = '192.168.15.200,56382'
-    database = 'OPCUAs60Mini'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE_SCADA
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -666,11 +659,10 @@ def comparar_scadatemporal_con_sqlserver2(fecha_inicio, fecha_fin):
     logging.basicConfig(filename='comparacion_scada.log', level=logging.INFO, 
                         format='%(asctime)s %(levelname)s:%(message)s')
 
-    db_settings = settings.DATABASES['default']
-    server = '192.168.15.200,56382'
-    database = 'CMD'
-    username = 'consultor_cmd'
-    password = '6yc24JS5B'
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -808,3 +800,140 @@ def acceso_modulo_requerido(nombre_modulo):
             return redirect('acceso_denegado')
         return _wrapped_view
     return decorator
+
+
+def importar_excel_a_cmd(ruta_archivo):
+    """
+    Recibe un archivo Excel con columnas: ID_scada, valor, timestamp.
+    Guarda cada registro en la tabla CMD correspondiente según el parámetro ID_scada,
+    en la columna de cabecera adecuada y con el timestamp.
+    """
+    df = pd.read_excel(ruta_archivo)
+    if not all(col in df.columns for col in ['ID_scada', 'valor', 'timestamp']):
+        raise ValueError("El archivo debe tener las columnas: ID_scada, valor, timestamp.")
+
+    server = settings.DB_SQL_SERVER
+    database = settings.DB_SQL_DATABASE
+    username = settings.DB_SQL_USERNAME
+    password = settings.DB_SQL_PASSWORD
+    
+    conn_str = (
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password};"
+        "TrustServerCertificate=Yes;"
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    for _, row in df.iterrows():
+        id_scada = row['ID_scada']
+        valor = row['valor']
+        timestamp = row['timestamp']
+        homologacion = Homologacion.objects.filter(id_scada=id_scada).first()
+        if not homologacion or not hasattr(homologacion, 'tabla_cmd'):
+            continue
+        tabla_cmd = homologacion.tabla_cmd
+        cabecera = homologacion.cabecera_cmd.replace(' ', '_')
+        # Inserta el valor en la columna de cabecera adecuada, con el timestamp
+        # Si ya existe ese timestamp, actualiza; si no, inserta nuevo
+        cursor.execute(f"SELECT COUNT(*) FROM [{tabla_cmd}] WHERE [timestamp]=?", timestamp)
+        existe = cursor.fetchone()[0] > 0
+        if existe:
+            sql = f"UPDATE [{tabla_cmd}] SET [{cabecera}]=? WHERE [timestamp]=?"
+            try:
+                cursor.execute(sql, valor, timestamp)
+            except Exception as e:
+                print(f"Error actualizando en {tabla_cmd}: {e}")
+        else:
+            sql = f"INSERT INTO [{tabla_cmd}] ([timestamp], [{cabecera}]) VALUES (?, ?)"
+            try:
+                cursor.execute(sql, timestamp, valor)
+            except Exception as e:
+                print(f"Error insertando en {tabla_cmd}: {e}")
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def ejecutar_etl_secuencial_cron():
+    """
+    Ejecuta secuencialmente las etapas del ETL usando las tablas ETLProcessStateCron y ETLProcessLogCron.
+    La fecha/hora de inicio se obtiene del parámetro con ID=2 menos 15 minutos,
+    la fecha/hora de fin es el mismo valor más 15 minutos.
+    Si concluye correctamente, actualiza la tabla parámetro con la nueva fecha_base.
+    Solo ejecuta si la fecha_base es menor que la fecha/hora actual por al menos 15 minutos.
+    """
+    try:
+        fecha_base = Parametro.objects.get(pk=2).valor
+        # Si el valor es string, conviértelo a datetime
+        if isinstance(fecha_base, str):
+            fecha_base = parse_datetime(fecha_base)
+    except (Parametro.DoesNotExist, ValueError, TypeError):
+        print("No se pudo obtener la fecha/hora base del parámetro.")
+        return
+
+    ahora = timezone.now()
+    if fecha_base > ahora - timedelta(minutes=15):
+        print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
+        return
+
+    fecha_inicio = fecha_base - timedelta(minutes=15)
+    fecha_fin = fecha_base + timedelta(minutes=15)
+
+    with transaction.atomic():
+        try:
+            estado = ETLProcessStateCron.objects.select_for_update().get(completado=False)
+        except ETLProcessStateCron.DoesNotExist:
+            estado = ETLProcessStateCron.objects.create(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                en_ejecucion=True,
+                completado=False
+            )
+        if estado.en_ejecucion or estado.completado:
+            return
+        estado.en_ejecucion = True
+        estado.fecha_inicio = fecha_inicio
+        estado.fecha_fin = fecha_fin
+        estado.save()
+
+    log = ETLProcessLogCron.objects.create(
+        fecha=fecha_inicio,
+        etapa=estado.etapa if hasattr(estado, 'etapa') else 'cron',
+        mensaje="Inicio de ejecución CRON"
+    )
+
+    try:
+        etapas = [
+            ('importar', importar_valores_scada_desde_sqlserver2),
+            ('completar', completar_minutos_faltantes_scadatemporal2),
+            ('exportar', exportar_scadatemporal_a_sqlserver),
+        ]
+        etapa_idx = [e[0] for e in etapas].index(getattr(estado, 'etapa', 'importar'))
+        funcion = etapas[etapa_idx][1]
+
+        funcion(fecha_inicio, fecha_fin)
+
+        # Avanzar al siguiente etapa
+        if etapa_idx < len(etapas) - 1:
+            estado.etapa = etapas[etapa_idx + 1][0]
+        else:
+            estado.completado = True  # Proceso terminado
+            # Actualiza la tabla parámetro con la nueva fecha_base (fecha_base + 15 minutos)
+            nuevo_valor = fecha_base + timedelta(minutes=15)
+            Parametro.objects.filter(pk=2).update(valor=nuevo_valor)
+
+        log.exito = True
+        log.mensaje = "Ejecución CRON finalizada correctamente"
+    except Exception as e:
+        log.exito = False
+        log.mensaje = f"Error: {str(e)}"
+        raise
+    finally:
+        log.fin = datetime.now()
+        log.save()
+        estado.en_ejecucion = False

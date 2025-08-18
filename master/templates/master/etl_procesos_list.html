@@ -65,12 +65,47 @@
             .sidebar { width: 100%; height: auto; position: static; }
             .main-content { margin-left: 0; }
         }
+                .floating-message {
+            position: fixed;
+            top: 32px;
+            right: 32px;
+            z-index: 99999;
+            min-width: 280px;
+            max-width: 400px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-size: 1.08em;
+            box-shadow: 0 2px 12px rgba(0,117,201,0.12);
+            animation: fadeOut 0.5s ease-in-out 3s forwards;
+        }
+        .floating-success {
+            background: #82BC00;
+            color: #fff;
+        }
+        .floating-error {
+            background: #FF8300;
+            color: #fff;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
     </style>
 </head>
 <body>
+        {% if success %}
+        <div class="floating-message floating-success" id="floating-success">
+            {{ success }}
+        </div>
+    {% endif %}
+    {% if error %}
+        <div class="floating-message floating-error" id="floating-error">
+            {{ error }}
+        </div>
+    {% endif %}
     <div class="sidebar">
         <div>
             <h2>ETL SCADA</h2>
+            
             <ul>
             <li><a href="{% url 'home' %}">Inicio</a></li>
             {% if user.profile.acceso_usuarios %}
@@ -141,11 +176,10 @@
     <div id="modal-cmd" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:9999;">
     <div style="background:#fff;max-width:400px;margin:80px auto;padding:32px 24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,117,201,0.12);position:relative;">
         <h2 style="color:#0075C9;margin-bottom:18px;">Cargar archivo Excel a CMD</h2>
-        <form method="post" action="#
-        " enctype="multipart/form-data">
+        <form method="post" action="{% url 'cargar_excel_cmd' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <label style="color:#0075C9;font-weight:500;">Selecciona archivo Excel:</label>
-            <input type="file" name="archivo_excel" accept=".xlsx,.xls" required style="margin-bottom:18px;">
+            <input type="file" name="archivo" accept=".xlsx,.xls" required style="margin-bottom:18px;">
             <div style="margin-top:18px;">
                 <button type="submit" style="background:#82BC00;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;margin-right:10px;">Cargar</button>
                 <button type="button" onclick="document.getElementById('modal-cmd').style.display='none';" style="background:#FF8300;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;">Cancelar</button>
@@ -170,4 +204,12 @@
 </div>
 
 </body>
+    <script>
+        setTimeout(function() {
+            var msg = document.getElementById('floating-success');
+            if (msg) { msg.style.display = 'none'; }
+            var err = document.getElementById('floating-error');
+            if (err) { err.style.display = 'none'; }
+        }, 3500);
+    </script>
 </html>

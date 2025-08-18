@@ -8,19 +8,47 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from .models import ETLProcessState, ETLProcessLog, Homologacion, Nivel, Central, Parametro
 from .forms import UsuarioForm, ProfileForm, SensorForm
-from .utils import acceso_modulo_requerido
+from .utils import acceso_modulo_requerido, importar_excel_a_cmd
+import os
+from django.conf import settings
 
 
 def login_etl(request):
     error = None
+    # Obtener el máximo de intentos desde la tabla Parámetro con ID 3
+    try:
+        max_intentos = int(Parametro.objects.get(pk=3).valor)
+    except (Parametro.DoesNotExist, ValueError, TypeError):
+        max_intentos = 3  # Valor por defecto si no existe o no es válido
+
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('home')  # Cambia 'home' por la vista principal de tu sistema
-        else:
+        try:
+            user_obj = User.objects.get(username=username)
+            profile = user_obj.profile
+            # Inicializa el campo intentos si no existe
+            if not hasattr(profile, 'intentos'):
+                profile.intentos = 0
+                profile.save()
+            if profile.bloqueado:
+                error = "Tu cuenta ha sido bloqueada por intentos fallidos. Contacta al administrador."
+            else:
+                user = authenticate(request, username=username, password=password)
+                if user is not None:
+                    login(request, user)
+                    profile.intentos = 0  # Resetear intentos al loguear
+                    profile.save()
+                    return redirect('home')
+                else:
+                    profile.intentos += 1
+                    if profile.intentos >= max_intentos:
+                        profile.bloqueado = True
+                        error = "Tu cuenta ha sido bloqueada por intentos fallidos. Contacta al administrador."
+                    else:
+                        error = 'Usuario o contraseña incorrectos.'
+                    profile.save()
+        except User.DoesNotExist:
             error = 'Usuario o contraseña incorrectos.'
     context = {
         'error': error,
@@ -54,6 +82,10 @@ def editar_usuario(request, user_id):
         if usuario_form.is_valid() and profile_form.is_valid():
             usuario_form.save()
             profile_form.save()
+            # Si el campo bloqueado se desactiva, reinicia los intentos
+            if not profile_form.cleaned_data.get('bloqueado', False):
+                profile.intentos = 0
+                profile.save()
             messages.success(request, 'Usuario actualizado correctamente.')
             return redirect('usuarios_list')
         else:
@@ -87,6 +119,7 @@ def eliminar_usuario(request, user_id):
 @acceso_modulo_requerido('acceso_usuarios')
 def cambiar_contrasena_usuario(request, user_id):
     usuario = get_object_or_404(User, pk=user_id)
+    profile = usuario.profile
     error = None
     if request.method == 'POST':
         nueva = request.POST.get('nueva')
@@ -98,7 +131,11 @@ def cambiar_contrasena_usuario(request, user_id):
         else:
             usuario.password = make_password(nueva)
             usuario.save()
-            messages.success(request, 'Contraseña cambiada correctamente.')
+            # Desbloquear usuario y reiniciar intentos
+            profile.bloqueado = False
+            profile.intentos = 0
+            profile.save()
+            messages.success(request, 'Contraseña cambiada correctamente. El usuario ha sido desbloqueado.')
             return redirect('usuarios_list')
     return render(request, 'master/cambiar_contrasena_usuario.html', {'usuario': usuario, 'error': error})
 
@@ -314,3 +351,37 @@ def desactivar_nivel(request, nivel_id):
         nivel.save()
         messages.success(request, 'Nivel desactivado correctamente.')
     return redirect('ver_niveles', central_id=nivel.central.id)
+
+
+
+@login_required
+@acceso_modulo_requerido('acceso_proceso_etl')
+def cargar_excel_cmd(request):
+    error = None
+    success = None
+    nombre_archivo = "cmd_import.xlsx"
+    ruta_destino = os.path.join(settings.MEDIA_ROOT, 'importados', nombre_archivo)
+    if request.method == 'POST' and request.FILES.get('archivo'):
+        archivo = request.FILES['archivo']
+        # Elimina el archivo anterior si existe
+        if os.path.exists(ruta_destino):
+            os.remove(ruta_destino)
+        os.makedirs(os.path.dirname(ruta_destino), exist_ok=True)
+        # Guarda el nuevo archivo
+        with open(ruta_destino, 'wb+') as destino:
+            for chunk in archivo.chunks():
+                destino.write(chunk)
+        try:
+            importar_excel_a_cmd(ruta_destino)
+            success = "Archivo cargado e importado correctamente."
+        except Exception as e:
+            error = f"Error al importar el archivo: {e}"
+    # Recarga la lista de procesos ETL y muestra el mensaje
+    procesos = ETLProcessState.objects.all().order_by('-actualizado')
+    return render(request, 'master/etl_procesos_list.html', {
+        'procesos': procesos,
+        'success': success,
+        'error': error,
+        'year': datetime.now().year,
+        'user': request.user
+    })
