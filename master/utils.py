@@ -877,8 +877,9 @@ def ejecutar_etl_secuencial_cron():
     except (Parametro.DoesNotExist, ValueError, TypeError):
         print("No se pudo obtener la fecha/hora base del parámetro.")
         return
-
-    from django.utils import timezone
+    if timezone.is_naive(fecha_base):
+        fecha_base = timezone.make_aware(fecha_base, timezone.get_current_timezone())
+        
     ahora = timezone.now()
     if fecha_base > ahora - timedelta(minutes=15):
         print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
