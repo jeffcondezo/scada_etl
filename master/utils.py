@@ -879,7 +879,7 @@ def ejecutar_etl_secuencial_cron():
         return
     if timezone.is_naive(fecha_base):
         fecha_base = timezone.make_aware(fecha_base, timezone.get_current_timezone())
-        
+
     ahora = timezone.now()
     if fecha_base > ahora - timedelta(minutes=15):
         print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
@@ -997,8 +997,13 @@ def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):
         minutos_existentes = [r.timestamp.replace(second=0, microsecond=0) for r in registros_ext]
         registros_dict = {r.timestamp.replace(second=0, microsecond=0): r for r in registros_ext}
 
-        t_actual = timezone.make_aware(fecha_inicio.replace(second=0, microsecond=0))
-        t_final = timezone.make_aware(fecha_fin.replace(second=0, microsecond=0))
+        t_actual = fecha_inicio.replace(second=0, microsecond=0)
+        t_final = fecha_fin.replace(second=0, microsecond=0)
+        from django.utils import timezone
+        if timezone.is_naive(t_actual):
+            t_actual = timezone.make_aware(t_actual, timezone.get_current_timezone())
+        if timezone.is_naive(t_final):
+            t_final = timezone.make_aware(t_final, timezone.get_current_timezone())
 
         nuevos = []
         while t_actual <= t_final:
@@ -1054,4 +1059,4 @@ def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):
 
         if nuevos:
             with transaction.atomic():
-                ScadaTemporal.objects.bulk_create(nuevos, batch_size=1000)
+                ScadaTemporal.objects.bulk_create(nuevos,
