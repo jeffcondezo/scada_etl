@@ -879,7 +879,7 @@ def ejecutar_etl_secuencial_cron():
         return
     if timezone.is_naive(fecha_base):
         fecha_base = timezone.make_aware(fecha_base, timezone.get_current_timezone())
-
+        
     ahora = timezone.now()
     if fecha_base > ahora - timedelta(minutes=15):
         print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
