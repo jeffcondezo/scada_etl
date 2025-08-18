@@ -260,7 +260,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
                 datos_por_minuto[minuto] = {}
             datos_por_minuto[minuto][reg.cabecera_cmd.replace(' ', '_')] = reg.valor
 
-        cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True).values_list('cabecera_cmd', flat=True)
+        cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True, nivel__estado=True, nivel__central__estado=True).values_list('cabecera_cmd', flat=True)
         cabeceras = [c.replace(' ', '_') for c in cabeceras]
 
         for minuto, valores in datos_por_minuto.items():
@@ -397,7 +397,7 @@ def ejecutar_proceso_etl_completo():
 
 def importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin):
 
-    homologaciones = Homologacion.objects.filter(estado=True)
+    homologaciones = Homologacion.objects.filter(estado=True, nivel__estado=True, nivel__central__estado=True)
     ids_scada = list(homologaciones.values_list('id_scada', flat=True))
     if not ids_scada:
         print("No hay id_scada activos.")
@@ -682,7 +682,7 @@ def comparar_scadatemporal_con_sqlserver2(fecha_inicio, fecha_fin):
         niveles = Nivel.objects.filter(central=central)
         registros = ScadaTemporal.objects.filter(nivel__in=niveles).order_by('timestamp_utc')
 
-        cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True).values_list('cabecera_cmd', flat=True)
+        cabeceras = Homologacion.objects.filter(nivel__central=central, estado=True, nivel__estado=True, nivel__central__estado=True).values_list('cabecera_cmd', flat=True)
         cabeceras = [c.replace(' ', '_') for c in cabeceras]
 
         for reg in registros:
@@ -862,20 +862,23 @@ def importar_excel_a_cmd(ruta_archivo):
 def ejecutar_etl_secuencial_cron():
     """
     Ejecuta secuencialmente las etapas del ETL usando las tablas ETLProcessStateCron y ETLProcessLogCron.
-    La fecha/hora de inicio se obtiene del parámetro con ID=2 menos 15 minutos,
+    La fecha/hora de inicio se obtiene del parámetro menos 15 minutos,
     la fecha/hora de fin es el mismo valor más 15 minutos.
     Si concluye correctamente, actualiza la tabla parámetro con la nueva fecha_base.
     Solo ejecuta si la fecha_base es menor que la fecha/hora actual por al menos 15 minutos.
+    Almacena en ETLProcessStateCron la cantidad de registros exportados por exportar_scadatemporal_a_sqlserver.
+    Guarda un registro en ETLProcessLogCron por cada etapa.
     """
     try:
         fecha_base = Parametro.objects.get(pk=2).valor
-        # Si el valor es string, conviértelo a datetime
         if isinstance(fecha_base, str):
+            from django.utils.dateparse import parse_datetime
             fecha_base = parse_datetime(fecha_base)
     except (Parametro.DoesNotExist, ValueError, TypeError):
         print("No se pudo obtener la fecha/hora base del parámetro.")
         return
 
+    from django.utils import timezone
     ahora = timezone.now()
     if fecha_base > ahora - timedelta(minutes=15):
         print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
@@ -885,55 +888,169 @@ def ejecutar_etl_secuencial_cron():
     fecha_fin = fecha_base + timedelta(minutes=15)
 
     with transaction.atomic():
-        try:
-            estado = ETLProcessStateCron.objects.select_for_update().get(completado=False)
-        except ETLProcessStateCron.DoesNotExist:
-            estado = ETLProcessStateCron.objects.create(
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin,
-                en_ejecucion=True,
-                completado=False
-            )
-        if estado.en_ejecucion or estado.completado:
-            return
-        estado.en_ejecucion = True
-        estado.fecha_inicio = fecha_inicio
-        estado.fecha_fin = fecha_fin
-        estado.save()
+        estado = ETLProcessStateCron.objects.create(
+            fecha_hora_inicio=fecha_inicio,
+            fecha_hora_fin=fecha_fin,
+            dia=fecha_base.date(),
+            en_ejecucion=True,
+            completado=False
+        )
 
-    log = ETLProcessLogCron.objects.create(
-        fecha=fecha_inicio,
-        etapa=estado.etapa if hasattr(estado, 'etapa') else 'cron',
-        mensaje="Inicio de ejecución CRON"
+    # ETAPA 1: importar
+    log_importar = ETLProcessLogCron.objects.create(
+        fecha_hora=fecha_inicio,
+        etapa='importar',
+        mensaje="Inicio de etapa importar",
+        proceso=estado
     )
-
     try:
-        etapas = [
-            ('importar', importar_valores_scada_desde_sqlserver2),
-            ('completar', completar_minutos_faltantes_scadatemporal2),
-            ('exportar', exportar_scadatemporal_a_sqlserver),
-        ]
-        etapa_idx = [e[0] for e in etapas].index(getattr(estado, 'etapa', 'importar'))
-        funcion = etapas[etapa_idx][1]
-
-        funcion(fecha_inicio, fecha_fin)
-
-        # Avanzar al siguiente etapa
-        if etapa_idx < len(etapas) - 1:
-            estado.etapa = etapas[etapa_idx + 1][0]
-        else:
-            estado.completado = True  # Proceso terminado
-            # Actualiza la tabla parámetro con la nueva fecha_base (fecha_base + 15 minutos)
-            nuevo_valor = fecha_base + timedelta(minutes=15)
-            Parametro.objects.filter(pk=2).update(valor=nuevo_valor)
-
-        log.exito = True
-        log.mensaje = "Ejecución CRON finalizada correctamente"
+        importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin)
+        log_importar.exito = True
+        log_importar.mensaje = "Etapa importar finalizada correctamente"
     except Exception as e:
-        log.exito = False
-        log.mensaje = f"Error: {str(e)}"
-        raise
-    finally:
-        log.fin = datetime.now()
-        log.save()
+        log_importar.exito = False
+        log_importar.mensaje = f"Error en importar: {str(e)}"
         estado.en_ejecucion = False
+        log_importar.fin = datetime.now()
+        log_importar.save()
+        estado.save()
+        return
+    log_importar.fin = datetime.now()
+    log_importar.save()
+
+    # ETAPA 2: completar
+    log_completar = ETLProcessLogCron.objects.create(
+        fecha_hora=fecha_inicio,
+        etapa='completar',
+        mensaje="Inicio de etapa completar",
+        proceso=estado
+    )
+    try:
+        completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin)
+        log_completar.exito = True
+        log_completar.mensaje = "Etapa completar finalizada correctamente"
+    except Exception as e:
+        log_completar.exito = False
+        log_completar.mensaje = f"Error en completar: {str(e)}"
+        estado.en_ejecucion = False
+        log_completar.fin = datetime.now()
+        log_completar.save()
+        estado.save()
+        return
+    log_completar.fin = datetime.now()
+    log_completar.save()
+
+    # ETAPA 3: exportar
+    log_exportar = ETLProcessLogCron.objects.create(
+        fecha_hora=fecha_inicio,
+        etapa='exportar',
+        mensaje="Inicio de etapa exportar",
+        proceso=estado
+    )
+    try:
+        registros_exportados = exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin)
+        estado.registros = registros_exportados
+        estado.completado = True
+        log_exportar.exito = True
+        log_exportar.mensaje = f"Etapa exportar finalizada correctamente. Registros exportados: {registros_exportados}"
+        # Actualiza la tabla parámetro con la nueva fecha_base (fecha_base + 15 minutos)
+        nuevo_valor = fecha_base + timedelta(minutes=15)
+        Parametro.objects.filter(pk=2).update(valor=nuevo_valor)
+    except Exception as e:
+        log_exportar.exito = False
+        log_exportar.mensaje = f"Error en exportar: {str(e)}"
+        estado.en_ejecucion = False
+        log_exportar.fin = datetime.now()
+        log_exportar.save()
+        estado.save()
+        return
+    log_exportar.fin = datetime.now()
+    log_exportar.save()
+
+    estado.en_ejecucion
+
+
+def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):
+    """
+    Interpola minutos faltantes en memoria y usa bulk_create.
+    Solo interpola si la diferencia entre el dato previo y el siguiente es de 15 minutos o menos.
+    Si no encuentra ambos extremos o la diferencia es mayor, no interpola.
+    """
+    ids = ScadaTemporal.objects.filter(
+        timestamp__range=(fecha_inicio, fecha_fin)
+    ).values_list('id_scada', flat=True).distinct()
+
+    for id_scada in ids:
+        # Buscar registros en el rango extendido para los extremos
+        rango_extendido_inicio = fecha_inicio - timedelta(days=2)
+        rango_extendido_fin = fecha_fin + timedelta(days=2)
+        registros_ext = list(
+            ScadaTemporal.objects.filter(
+                id_scada=id_scada,
+                timestamp__range=(rango_extendido_inicio, rango_extendido_fin)
+            ).order_by('timestamp')
+        )
+        if not registros_ext:
+            continue
+
+        minutos_existentes = [r.timestamp.replace(second=0, microsecond=0) for r in registros_ext]
+        registros_dict = {r.timestamp.replace(second=0, microsecond=0): r for r in registros_ext}
+
+        t_actual = timezone.make_aware(fecha_inicio.replace(second=0, microsecond=0))
+        t_final = timezone.make_aware(fecha_fin.replace(second=0, microsecond=0))
+
+        nuevos = []
+        while t_actual <= t_final:
+            if t_actual not in registros_dict:
+                idx = bisect_left(minutos_existentes, t_actual)
+                prev = None
+                next_ = None
+                if 0 < idx < len(minutos_existentes):
+                    prev = registros_dict[minutos_existentes[idx - 1]]
+                    next_ = registros_dict[minutos_existentes[idx]]
+                elif idx == 0 and len(minutos_existentes) > 1:
+                    next_ = registros_dict[minutos_existentes[0]]
+                    prevs = ScadaTemporal.objects.filter(
+                        id_scada=id_scada,
+                        timestamp__lt=minutos_existentes[0],
+                        timestamp__gte=rango_extendido_inicio
+                    ).order_by('-timestamp')
+                    if prevs.exists():
+                        prev = prevs.first()
+                elif idx == len(minutos_existentes):
+                    prev = registros_dict[minutos_existentes[-1]]
+                    nexts = ScadaTemporal.objects.filter(
+                        id_scada=id_scada,
+                        timestamp__gt=minutos_existentes[-1],
+                        timestamp__lte=rango_extendido_fin
+                    ).order_by('timestamp')
+                    if nexts.exists():
+                        next_ = nexts.first()
+
+                # Solo interpola si ambos extremos existen y la diferencia es <= 15 minutos
+                if prev and next_:
+                    diferencia_minutos = abs(int((next_.timestamp - prev.timestamp).total_seconds() // 60))
+                    if diferencia_minutos <= 15:
+                        total_secs = (next_.timestamp - prev.timestamp).total_seconds()
+                        if total_secs == 0:
+                            valor_interp = prev.valor
+                        else:
+                            secs_to_t = (t_actual - prev.timestamp).total_seconds()
+                            valor_interp = prev.valor + (next_.valor - prev.valor) * (secs_to_t / total_secs)
+                        nuevos.append(
+                            ScadaTemporal(
+                                id_scada=id_scada,
+                                cabecera_cmd=prev.cabecera_cmd,
+                                valor=valor_interp,
+                                timestamp=t_actual,
+                                timestamp_utc=t_actual - timedelta(hours=5),
+                                nivel=prev.nivel,
+                                tipo='2'
+                            )
+                        )
+                # Si no hay ambos extremos o la diferencia es mayor, no interpola
+            t_actual += timedelta(minutes=1)
+
+        if nuevos:
+            with transaction.atomic():
+                ScadaTemporal.objects.bulk_create(nuevos, batch_size=1000)

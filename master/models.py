@@ -105,25 +105,20 @@ class Profile(models.Model):
 
 
 class ETLProcessStateCron(models.Model):
-    ETAPAS = [
-        ('importar', 'Importar'),
-        ('completar', 'Completar'),
-        ('exportar', 'Exportar'),
-        ('comparar', 'Comparar'),
-    ]
     fecha_hora_inicio = models.DateTimeField()
     fecha_hora_fin = models.DateTimeField()
-    etapa = models.CharField(max_length=20, choices=ETAPAS)
     dia = models.DateField()
     completado = models.BooleanField(default=False)
     en_ejecucion = models.BooleanField(default=False)
     actualizado = models.DateTimeField(auto_now=True)
+    registros = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.etapa} - {self.dia_actual}"
 
 
 class ETLProcessLogCron(models.Model):
+    proceso = models.ForeignKey(ETLProcessStateCron, on_delete=models.CASCADE)
     fecha_hora = models.DateTimeField()
     etapa = models.CharField(max_length=20)
     inicio = models.DateTimeField(auto_now_add=True)

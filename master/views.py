@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
-from .models import ETLProcessState, ETLProcessLog, Homologacion, Nivel, Central, Parametro
+from .models import ETLProcessState, ETLProcessLog, Homologacion, Nivel, Central, Parametro, ETLProcessStateCron, ETLProcessLogCron
 from .forms import UsuarioForm, ProfileForm, SensorForm
 from .utils import acceso_modulo_requerido, importar_excel_a_cmd
 import os
@@ -152,8 +152,9 @@ def agregar_usuario(request):
             user = usuario_form.save(commit=False)
             user.password = make_password(password)
             user.save()
-            # Si el profile se crea automáticamente con signals, solo actualiza
-            profile = user.profile
+            # Crear el profile si no existe
+            from .models import Profile
+            profile, created = Profile.objects.get_or_create(user=user)
             for field in profile_form.cleaned_data:
                 setattr(profile, field, profile_form.cleaned_data[field])
             profile.save()
@@ -176,19 +177,18 @@ def agregar_usuario(request):
 @login_required
 @acceso_modulo_requerido('acceso_proceso_etl')
 def etl_procesos_list(request):
-    procesos = ETLProcessState.objects.all().order_by('-actualizado')
+    procesos = ETLProcessStateCron.objects.all().order_by('-actualizado')
     return render(request, 'master/etl_procesos_list.html', {
         'procesos': procesos,
         'year': datetime.now().year,
         'user': request.user
     })
 
-
 @login_required
 @acceso_modulo_requerido('acceso_proceso_etl')
 def etl_proceso_detalle(request, proceso_id):
-    proceso = get_object_or_404(ETLProcessState, pk=proceso_id)
-    logs = ETLProcessLog.objects.all().order_by('-inicio')
+    proceso = get_object_or_404(ETLProcessStateCron, pk=proceso_id)
+    logs = ETLProcessLogCron.objects.filter(proceso=proceso).order_by('-inicio')
     return render(request, 'master/etl_proceso_detalle.html', {
         'proceso': proceso,
         'logs': logs,
