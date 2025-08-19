@@ -949,7 +949,10 @@ def ejecutar_etl_secuencial_cron():
         proceso=estado
     )
     try:
-        registros_exportados = exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin)
+        # Restar 5 horas a fecha_inicio y fecha_fin antes de exportar
+        fecha_inicio_export = fecha_inicio - timedelta(hours=5)
+        fecha_fin_export = fecha_fin - timedelta(hours=5)
+        registros_exportados = exportar_scadatemporal_a_sqlserver(fecha_inicio_export, fecha_fin_export)
         estado.registros = registros_exportados
         estado.completado = True
         log_exportar.exito = True
