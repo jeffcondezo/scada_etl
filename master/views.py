@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from .models import ETLProcessState, ETLProcessLog, Homologacion, Nivel, Central, Parametro, ETLProcessStateCron, ETLProcessLogCron
 from .forms import UsuarioForm, ProfileForm, SensorForm
-from .utils import acceso_modulo_requerido, importar_excel_a_cmd
+from .utils import acceso_modulo_requerido, importar_excel_a_cmd, ejecutar_etl_secuencial_cron
 import os
 from django.conf import settings
 
@@ -378,6 +378,28 @@ def cargar_excel_cmd(request):
             error = f"Error al importar el archivo: {e}"
     # Recarga la lista de procesos ETL y muestra el mensaje
     procesos = ETLProcessState.objects.all().order_by('-actualizado')
+    return render(request, 'master/etl_procesos_list.html', {
+        'procesos': procesos,
+        'success': success,
+        'error': error,
+        'year': datetime.now().year,
+        'user': request.user
+    })
+
+
+@login_required
+@acceso_modulo_requerido('acceso_proceso_etl')
+def ejecutar_etl_manual(request):
+    success = None
+    error = None
+    if request.method == 'POST':
+        try:
+            ejecutar_etl_secuencial_cron()
+            success = "El proceso ETL se ejecutó correctamente."
+        except Exception as e:
+            error = f"Error al ejecutar el proceso ETL: {e}"
+    # Recarga la lista de procesos ETL y muestra el mensaje flotante
+    procesos = ETLProcessStateCron.objects.all().order_by('-actualizado')
     return render(request, 'master/etl_procesos_list.html', {
         'procesos': procesos,
         'success': success,

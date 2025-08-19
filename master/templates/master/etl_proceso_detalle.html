@@ -112,7 +112,6 @@
                     <th>Fin</th>
                     <th>Etapa</th>
                     <th>Éxito</th>
-                    <th>Registros afectados</th>
                     <th>Mensaje</th>
                 </tr>
             </thead>
@@ -123,7 +122,6 @@
                     <td>{{ log.fin|default:"-" }}</td>
                     <td>{{ log.etapa }}</td>
                     <td>{% if log.exito %}✔{% else %}✖{% endif %}</td>
-                    <td>1500</td>
                     <td>{{ log.mensaje|default:"" }}</td>
                 </tr>
                 {% empty %}

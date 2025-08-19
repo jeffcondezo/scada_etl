@@ -227,6 +227,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     a las tablas correspondientes en la base de datos SCADA en SQL Server.
     Si el registro con ese timestamp existe, actualiza los campos; si no existe, lo crea.
     """
+    contador_insert = 0
     server = settings.DB_SQL_SERVER
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
@@ -281,6 +282,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
                     print(f"Error actualizando en {nombre_tabla} para {minuto}: {e}")
             else:
                 # Inserta el registro nuevo
+                contador_insert +=1
                 columnas_insert = ['timestamp'] + columnas
                 valores_insert = [minuto] + valores_update
                 placeholders = ','.join(['?'] * len(columnas_insert))
@@ -293,6 +295,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     conn.commit()
     cursor.close()
     conn.close()
+    return contador_insert
 
 
 def comparar_scadatemporal_con_sqlserver(fecha_inicio, fecha_fin):
@@ -868,6 +871,7 @@ def ejecutar_etl_secuencial_cron():
     Solo ejecuta si la fecha_base es menor que la fecha/hora actual por al menos 15 minutos.
     Almacena en ETLProcessStateCron la cantidad de registros exportados por exportar_scadatemporal_a_sqlserver.
     Guarda un registro en ETLProcessLogCron por cada etapa.
+    No inicia si ya hay un registro en ejecución.
     """
     try:
         fecha_base = Parametro.objects.get(pk=2).valor
@@ -877,12 +881,18 @@ def ejecutar_etl_secuencial_cron():
     except (Parametro.DoesNotExist, ValueError, TypeError):
         print("No se pudo obtener la fecha/hora base del parámetro.")
         return
+    from django.utils import timezone
     if timezone.is_naive(fecha_base):
         fecha_base = timezone.make_aware(fecha_base, timezone.get_current_timezone())
         
     ahora = timezone.now()
     if fecha_base > ahora - timedelta(minutes=15):
         print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
+        return
+
+    # Verifica que no haya un proceso en ejecución
+    if ETLProcessStateCron.objects.filter(en_ejecucion=True).exists():
+        print("Ya hay un proceso ETLProcessStateCron en ejecución. No se puede iniciar otro.")
         return
 
     fecha_inicio = fecha_base - timedelta(minutes=15)
@@ -955,8 +965,9 @@ def ejecutar_etl_secuencial_cron():
         registros_exportados = exportar_scadatemporal_a_sqlserver(fecha_inicio_export, fecha_fin_export)
         estado.registros = registros_exportados
         estado.completado = True
+        estado.en_ejecucion = False
         log_exportar.exito = True
-        log_exportar.mensaje = f"Etapa exportar finalizada correctamente. Registros exportados: {registros_exportados}"
+        log_exportar.mensaje = f"Etapa exportar finalizada correctamente."
         # Actualiza la tabla parámetro con la nueva fecha_base (fecha_base + 15 minutos)
         nuevo_valor = fecha_base + timedelta(minutes=15)
         Parametro.objects.filter(pk=2).update(valor=nuevo_valor)
@@ -970,8 +981,7 @@ def ejecutar_etl_secuencial_cron():
         return
     log_exportar.fin = datetime.now()
     log_exportar.save()
-
-    estado.en_ejecucion
+    estado.save()
 
 
 def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):

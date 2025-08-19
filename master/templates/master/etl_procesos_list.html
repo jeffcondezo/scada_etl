@@ -148,6 +148,7 @@
                     <th>Fecha Fin</th>
                     <th>Completado</th>
                     <th>En Ejecución</th>
+                    <th>Registros</th>
                     <th>Detalles</th>
                 </tr>
             </thead>
@@ -159,6 +160,7 @@
                     <td>{{ proceso.actualizado }}</td>
                     <td>{% if proceso.completado %}✔{% else %}✖{% endif %}</td>
                     <td>{% if proceso.en_ejecucion %}✔{% else %}✖{% endif %}</td>
+                    <td>{{ proceso.registros }}</td>
                     <td>
                         <a href="{% url 'etl_proceso_detalle' proceso.id %}" style="background:#0075C9;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;">Detalles</a>
                     </td>
@@ -192,7 +194,7 @@
 <div id="modal-ejecucion" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:9999;">
     <div style="background:#fff;max-width:400px;margin:80px auto;padding:32px 24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,117,201,0.12);position:relative;">
         <h2 style="color:#0075C9;margin-bottom:18px;">¿Desea ejecutar el proceso ETL manualmente?</h2>
-        <form method="post" action="#">
+        <form method="post" action="{% url 'ejecutar_etl_manual' %}">
             {% csrf_token %}
             <div style="margin-top:18px;">
                 <button type="submit" style="background:#82BC00;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;margin-right:10px;">Sí, ejecutar</button>

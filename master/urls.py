@@ -28,4 +28,5 @@ urlpatterns = [
     path('niveles/<int:nivel_id>/desactivar/', desactivar_nivel, name='desactivar_nivel'),
     path('acceso-denegado/', lambda request: render(request, 'master/acceso_denegado.html', {'user': request.user,'year': datetime.now().year}), name='acceso_denegado'),
     path('cargar-excel-cmd/', cargar_excel_cmd, name='cargar_excel_cmd'),
+    path('ejecutar-etl-manual/', ejecutar_etl_manual, name='ejecutar_etl_manual'),
 ]
