@@ -11,6 +11,7 @@ from .forms import UsuarioForm, ProfileForm, SensorForm
 from .utils import acceso_modulo_requerido, importar_excel_a_cmd, ejecutar_etl_secuencial_cron
 import os
 from django.conf import settings
+from django.urls import reverse
 
 
 def login_etl(request):
@@ -217,17 +218,32 @@ def sensores_list(request):
         'user': request.user
     })
 
+
 @login_required
 @acceso_modulo_requerido('acceso_sensores')
 def editar_sensor(request, sensor_id):
     sensor = get_object_or_404(Homologacion, pk=sensor_id)
+    error = None
+    if request.method == 'POST':
+        form = SensorForm(request.POST, instance=sensor)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Sensor actualizado correctamente.')
+            # Redirige a la vista de sensores por nivel previa
+            url = reverse('sensores_list') + f'?nivel={sensor.nivel.id}'
+            return redirect(url)
+        else:
+            error = "Debe completar todos los campos obligatorios correctamente."
+    else:
+        form = SensorForm(instance=sensor)
     niveles = Nivel.objects.all()
     centrales = Central.objects.all()
-    # lógica de guardado aquí...
     return render(request, 'master/editar_sensor.html', {
+        'form': form,
         'sensor': sensor,
         'niveles': niveles,
         'centrales': centrales,
+        'error': error,
         'year': datetime.now().year,
         'user': request.user
     })
@@ -247,10 +263,14 @@ def agregar_sensor(request):
             error = "Debe completar todos los campos obligatorios correctamente."
     else:
         form = SensorForm()
+    niveles = Nivel.objects.all()
+    centrales = Central.objects.all()
     return render(request, 'master/agregar_sensor.html', {
         'form': form,
         'error': error,
         'year': datetime.now().year,
+        'niveles': niveles,
+        'centrales': centrales,
         'user': request.user
     })
 

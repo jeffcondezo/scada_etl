@@ -127,17 +127,17 @@
     <label>Cabecera CMD:
         <input type="text" name="cabecera_cmd" value="{{ sensor.cabecera_cmd }}" required>
     </label>
-        <label>Central:
-        <select name="central" required>
+    <label>Central:
+        <select name="central" id="central-select" required>
             {% for central in centrales %}
                 <option value="{{ central.id }}" {% if sensor.nivel.central.id == central.id %}selected{% endif %}>{{ central.descripcion }}</option>
             {% endfor %}
         </select>
     </label>
     <label>Nivel:
-        <select name="nivel" required>
+        <select name="nivel" id="nivel-select" required>
             {% for nivel in niveles %}
-                <option value="{{ nivel.id }}" {% if sensor.nivel.id == nivel.id %}selected{% endif %}>{{ nivel.descripcion }}</option>
+                <option value="{{ nivel.id }}" data-central="{{ nivel.central.id }}" {% if sensor.nivel.id == nivel.id %}selected{% endif %}>{{ nivel.descripcion }}</option>
             {% endfor %}
         </select>
     </label>
@@ -159,4 +159,36 @@
         </div>
     </div>
 </body>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const centralSelect = document.getElementById('central-select');
+    const nivelSelect = document.getElementById('nivel-select');
+
+    function filtrarNiveles() {
+        const centralId = centralSelect.value;
+        Array.from(nivelSelect.options).forEach(function(option) {
+            if (option.getAttribute('data-central') === centralId) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        // Selecciona el primer nivel visible si el actual no corresponde
+        if (
+            nivelSelect.selectedOptions.length === 0 ||
+            nivelSelect.selectedOptions[0].style.display === 'none'
+        ) {
+            for (let option of nivelSelect.options) {
+                if (option.style.display !== 'none') {
+                    nivelSelect.value = option.value;
+                    break;
+                }
+            }
+        }
+    }
+
+    centralSelect.addEventListener('change', filtrarNiveles);
+    filtrarNiveles(); // Filtra al cargar la página
+});
+</script>
 </html>
