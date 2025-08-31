@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Niveles de la Central</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="{% static 'css/jquery.dataTables.min.css' %}">
     {% load static %}
 <link rel="stylesheet" href="{% static 'css/niveles_list.css' %}">
 </head>
@@ -85,6 +85,6 @@
 </table>
 <a href="{% url 'centrales_list' %}" class="back-btn">Volver a Centrales</a>
     </div>
-    <script src="{% static 'js/niveles_list.js' %}"></script>
-    <script src="{% static 'js/niveles_list.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
     <script src="{% static 'js/niveles_list.js' %}"></script>

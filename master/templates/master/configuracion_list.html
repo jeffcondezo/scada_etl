@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Configuración - Parámetros</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="{% static 'css/jquery.dataTables.min.css' %}">
     {% load static %}
 <link rel="stylesheet" href="{% static 'css/configuracion_list.css' %}">
 </head>
@@ -70,5 +70,6 @@
         </table>
         <a href="{% url 'home' %}" class="back-btn">Volver al Panel</a>
     </div>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
     <script src="{% static 'js/configuracion_list.js' %}"></script>
-    <script src="{% static 'js/configuracion_list.js' %}"></script>  

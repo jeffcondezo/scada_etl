@@ -5,7 +5,7 @@
     <title>Lista de Sensores</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="{% static 'css/jquery.dataTables.min.css' %}">
     {% load static %}
 <link rel="stylesheet" href="{% static 'css/sensores_list.css' %}">
 </head>
@@ -85,6 +85,6 @@
         {% endif %}
     </div>
     <!-- JQuery y DataTables JS -->
-    <script src="{% static 'js/sensores_list.js' %}"></script>
-    <script src="{% static 'js/sensores_list.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
     <script src="{% static 'js/sensores_list.js' %}"></script>
