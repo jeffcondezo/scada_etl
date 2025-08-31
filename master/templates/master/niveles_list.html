@@ -65,12 +65,12 @@
             <td>
                 <a href="{% url 'sensores_list' %}?nivel={{ nivel.id }}" class="btn_ver_sensores">Ver sensores</a>
                 {% if nivel.estado %}
-                    <form method="post" action="{% url 'desactivar_nivel' nivel.id %}" style="display:inline;">
+                    <form method="post" action="{% url 'desactivar_nivel' nivel.id %}" class="form-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn_desactivar_sensor">Desactivar</button>
                     </form>
                 {% else %}
-                    <form method="post" action="{% url 'activar_nivel' nivel.id %}" style="display:inline;">
+                    <form method="post" action="{% url 'activar_nivel' nivel.id %}" class="form-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn_activar_sensor">Activar</button>
                     </form>
