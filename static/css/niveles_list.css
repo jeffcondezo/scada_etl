@@ -33,3 +33,6 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
         .btn_desactivar_sensor{
             background:#FF8300;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;
         }
+        .form-inline {
+            display:inline;
+        }

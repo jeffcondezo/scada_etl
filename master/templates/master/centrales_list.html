@@ -62,12 +62,12 @@
             <td>
                 <a href="{% url 'ver_niveles' central.id %}" class="btn_ver_niveles">Ver niveles</a>
                 {% if central.estado %}
-                    <form method="post" action="{% url 'desactivar_central' central.id %}" style="display:inline;">
+                    <form method="post" action="{% url 'desactivar_central' central.id %}" class="form-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn_desactivar">Desactivar</button>
                     </form>
                 {% else %}
-                    <form method="post" action="{% url 'activar_central' central.id %}" style="display:inline;">
+                    <form method="post" action="{% url 'activar_central' central.id %}" class="form-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn_activar">Activar</button>
                     </form>

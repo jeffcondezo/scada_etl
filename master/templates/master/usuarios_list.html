@@ -49,10 +49,9 @@
         <tr>
             <th>Usuario</th>
             <th>Nombre completo</th>
-            <th>Email</th>
             <th>Activo</th>
             <th>Bloqueado</th>
-            <th>Usuarios</th>
+            <th>Usuarios (Administrador)</th>
             <th>Proceso ETL</th>
             <th>Sensores</th>
             <th>Configuración</th>
@@ -64,7 +63,6 @@
         <tr>
             <td>{{ usuario.username }}</td>
             <td>{{ usuario.get_full_name }}</td>
-            <td>{{ usuario.email }}</td>
             <td>{% if usuario.is_active %}Sí{% else %}No{% endif %}</td>
             <td>{% if usuario.profile.bloqueado %}Sí{% else %}No{% endif %}</td>
             <td>{% if usuario.profile.acceso_usuarios %}✔{% else %}✖{% endif %}</td>
