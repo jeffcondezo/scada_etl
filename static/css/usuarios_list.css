@@ -94,6 +94,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
         .back-btn {
             background: #82BC00; color: #fff; border: none; padding: 8px 18px; border-radius: 5px;
             font-size: 1em; cursor: pointer; text-decoration: none; margin-top: 12px; display: inline-block;
+            margin-bottom: 18px;
         }
         .back-btn:hover { background: #0075C9; }
         @media (max-width: 700px) {
