@@ -1,0 +1,93 @@
+body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0075C9 0%, #82BC00 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            width: 370px;
+            margin: 80px auto;
+            background: #fff;
+            padding: 40px 36px 32px 36px;
+            border-radius: 16px;
+            box-shadow: 0 6px 32px rgba(0,117,201,0.10), 0 1.5px 6px rgba(130,188,0,0.08);
+            position: relative;
+        }
+        .login-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 28px;
+        }
+        .logo-circle {
+            width: 48px;
+            height: 48px;
+            background: #0075C9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+        }
+        .logo-circle svg {
+            width: 28px;
+            height: 28px;
+            fill: #fff;
+        }
+        .login-title {
+            font-size: 1.6em;
+            font-weight: 600;
+            color: #0075C9;
+            letter-spacing: 1px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #0075C9;
+            font-weight: 500;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 18px;
+            border: 1.5px solid #0075C9;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: #82BC00;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, #0075C9 60%, #FF8300 100%);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255,131,0,0.10);
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #82BC00 60%, #FF8300 100%);
+        }
+        .error {
+            color: #FF8300;
+            background: #fff3e6;
+            border: 1px solid #FF8300;
+            border-radius: 4px;
+            text-align: center;
+            margin-bottom: 16px;
+            padding: 8px 0;
+            font-weight: 500;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 22px;
+            color: #82BC00;
+            font-size: 0.95em;
+        }

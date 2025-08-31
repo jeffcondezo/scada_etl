@@ -1,0 +1,151 @@
+body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f4f8fb;
+            margin: 0;
+        }
+        .sidebar {
+            width: 220px;
+            background: linear-gradient(135deg, #0075C9 0%, #82BC00 100%);
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            box-shadow: 2px 0 8px rgba(0,117,201,0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar h2 {
+            text-align: center;
+            margin: 32px 0 18px 0;
+            font-size: 1.4em;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 0;
+        }
+        .sidebar ul li a {
+            display: block;
+            padding: 14px 28px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.08em;
+            border-left: 4px solid transparent;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .sidebar ul li a:hover, .sidebar ul li.active a {
+            background: #FF8300;
+            border-left: 4px solid #fff;
+            color: #fff;
+        }
+        .sidebar-footer {
+            text-align: center;
+            padding: 18px 0;
+            font-size: 0.95em;
+            color: #FF8300;
+            background: rgba(255,255,255,0.07);
+        }
+        .main-content {
+            margin-left: 220px;
+            padding: 48px 60px 32px 60px;
+            min-height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 36px;
+        }
+        .user-info {
+            color: #0075C9;
+            font-weight: 600;
+            font-size: 1.08em;
+            display: flex;
+            align-items: center;
+        }
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: #82BC00;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .logout-btn {
+            background: #FF8300;
+            color: #fff;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255,131,0,0.10);
+            transition: background 0.2s;
+        }
+        .logout-btn:hover {
+            background: #d96c00;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 32px;
+            margin-top: 24px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,117,201,0.07);
+            padding: 28px 22px 22px 22px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: box-shadow 0.2s;
+            border-left: 6px solid #0075C9;
+        }
+        .card.etl { border-left-color: #82BC00; }
+        .card.users { border-left-color: #FF8300; }
+        .card h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.18em;
+            color: #0075C9;
+        }
+        .card.etl h3 { color: #82BC00; }
+        .card.users h3 { color: #FF8300; }
+        .card p {
+            margin: 0 0 18px 0;
+            color: #444;
+            font-size: 1em;
+        }
+        .card a {
+            color: #fff;
+            background: #0075C9;
+            padding: 8px 18px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.98em;
+            transition: background 0.2s;
+        }
+        .card.etl a { background: #82BC00; }
+        .card.users a { background: #FF8300; }
+        .card a:hover { opacity: 0.85; }
+        @media (max-width: 700px) {
+            .main-content { padding: 24px 8px 16px 8px; }
+            .sidebar { width: 100%; height: auto; position: static; }
+            .main-content { margin-left: 0; }
+        }
+        .card.config { border-left-color: #FF8300; }
+        .card.config h3 { color: #FF8300; }
+        .card.config a { background: #FF8300; }
