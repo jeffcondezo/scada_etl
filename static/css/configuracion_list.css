@@ -19,6 +19,17 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
         tr:hover { background: #e0e4ea; color: #222; }
         .back-btn { background: #82BC00; color: #fff; border: none; padding: 8px 18px; border-radius: 5px; font-size: 1em; cursor: pointer; text-decoration: none; margin-top: 12px; display: inline-block; }
         .back-btn:hover { background: #0075C9; }
+        .btn_editar {
+            background: #0075C9;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-right: 6px;
+        }
+        .btn_editar:hover {
+            background: #005999;
+        }
         @media (max-width: 700px) {
             .main-content { padding: 24px 8px 16px 8px; }
             .sidebar { width: 100%; height: auto; position: static; }

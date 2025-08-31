@@ -58,7 +58,7 @@
                     <td>{{ parametro.nombre }}</td>
                     <td>{{ parametro.valor }}</td>
                     <td>
-                        <a href="{% url 'editar_parametro' parametro.id %}" style="background:#82BC00;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;">Editar</a>
+                        <a href="{% url 'editar_parametro' parametro.id %}" class="btn_editar">Editar</a>
                     </td>
                 </tr>
                 {% empty %}
@@ -71,12 +71,4 @@
         <a href="{% url 'home' %}" class="back-btn">Volver al Panel</a>
     </div>
     <script src="{% static 'js/configuracion_list.js' %}"></script>
-    <script src="{% static 'js/configuracion_list.js' %}"></script>
-    <script>
-        $(document).ready(function() {
-            $('#tabla-parametros').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
-                }
-            });
-        });
+    <script src="{% static 'js/configuracion_list.js' %}"></script>  

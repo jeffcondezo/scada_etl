@@ -24,3 +24,12 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
             .sidebar { width: 100%; height: auto; position: static; }
             .main-content { margin-left: 0; }
         }
+        .btn_ver_sensores{
+            background:#0075C9;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;
+        }
+        .btn_activar_sensor{
+            background:#82BC00;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;
+        }
+        .btn_desactivar_sensor{
+            background:#FF8300;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;
+        }

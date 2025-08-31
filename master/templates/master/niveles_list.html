@@ -62,16 +62,16 @@
             <td>{{ nivel.central.descripcion }}</td>
             <td>{% if nivel.estado %}Activo{% else %}Inactivo{% endif %}</td>
             <td>
-                <a href="{% url 'sensores_list' %}?nivel={{ nivel.id }}" style="background:#0075C9;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;">Ver sensores</a>
+                <a href="{% url 'sensores_list' %}?nivel={{ nivel.id }}" class="btn_ver_sensores">Ver sensores</a>
                 {% if nivel.estado %}
                     <form method="post" action="{% url 'desactivar_nivel' nivel.id %}" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" style="background:#FF8300;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">Desactivar</button>
+                        <button type="submit" class="btn_desactivar_sensor">Desactivar</button>
                     </form>
                 {% else %}
                     <form method="post" action="{% url 'activar_nivel' nivel.id %}" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" style="background:#82BC00;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">Activar</button>
+                        <button type="submit" class="btn_activar_sensor">Activar</button>
                     </form>
                 {% endif %}
             </td>

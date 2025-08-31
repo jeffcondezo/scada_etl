@@ -45,7 +45,7 @@
             </form>
         </div>
         <h1>Lista de Sensores</h1>
-        <a href="{% url 'agregar_sensor' %}" class="back-btn" style="background:#0075C9;margin-bottom:18px;">Agregar sensor</a>
+        <a href="{% url 'agregar_sensor' %}" class="back-btn btn-agregar_sensor">Agregar sensor</a>
         <table id="tabla-sensores">
             <thead>
                 <tr>
@@ -68,7 +68,7 @@
                     <td>{% if sensor.estado %}Sí{% else %}No{% endif %}</td>
                     <td>{{ sensor.get_tipo_display }}</td>
                     <td>
-                        <a href="{% url 'editar_sensor' sensor.id %}" style="background:#82BC00;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;">Editar</a>
+                        <a href="{% url 'editar_sensor' sensor.id %}" class="btn_editar_sensor">Editar</a>
                     </td>
                 </tr>
                 {% empty %}

@@ -43,7 +43,7 @@
             </form>
         </div>
         <h1>Usuarios del Sistema</h1>
-        <a href="{% url 'agregar_usuario' %}" class="back-btn" style="background:#0075C9;margin-bottom:18px;">Agregar usuario</a>
+        <a href="{% url 'agregar_usuario' %}" class="back-btn btn_agregar_usuario">Agregar usuario</a>
  <table id="tabla-usuarios">
     <thead>
         <tr>
@@ -72,9 +72,9 @@
             <td>{% if usuario.profile.acceso_sensores %}✔{% else %}✖{% endif %}</td>
             <td>{% if usuario.profile.acceso_configuracion %}✔{% else %}✖{% endif %}</td>
             <td>
-                <a href="{% url 'editar_usuario' usuario.id %}" style="background:#82BC00;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;">Editar</a>
-                <a href="{% url 'eliminar_usuario' usuario.id %}" style="background:#FF8300;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;">Eliminar</a>
-                <a href="{% url 'cambiar_contrasena_usuario' usuario.id %}" style="background:#0075C9;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;margin-right:6px;">Cambiar contraseña</a>
+                <a href="{% url 'editar_usuario' usuario.id %}" class="btn_editar_usuario">Editar</a>
+                <a href="{% url 'eliminar_usuario' usuario.id %}" class="btn_eliminar_usuario">Eliminar</a>
+                <a href="{% url 'cambiar_contrasena_usuario' usuario.id %}" class="btn_cambiar_contrasena_usuario">Cambiar contraseña</a>
             </td>
         </tr>
         {% empty %}

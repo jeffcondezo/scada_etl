@@ -5,10 +5,10 @@
     <title>Procesos ETL - ETL SCADA</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% load static %}
-<link rel="stylesheet" href="{% static 'css/etl_procesos_list.css' %}">
+    <link rel="stylesheet" href="{% static 'css/etl_procesos_list.css' %}">
 </head>
 <body>
-        {% if success %}
+    {% if success %}
         <div class="floating-message floating-success" id="floating-success">
             {{ success }}
         </div>
@@ -21,7 +21,6 @@
     <div class="sidebar">
         <div>
             <h2>ETL SCADA</h2>
-            
             <ul>
             <li><a href="{% url 'home' %}">Inicio</a></li>
             {% if user.profile.acceso_usuarios %}
@@ -54,8 +53,8 @@
             </form>
         </div>
         <h1>Procesos ETL</h1>
-        <a href="#" class="back-btn" style="background:#0075C9;margin-bottom:18px;" onclick="document.getElementById('modal-ejecucion').style.display='block';return false;">Ejecución Manual ETL</a>
-        <a href="#" class="back-btn" style="background:#0075C9;margin-bottom:18px;" onclick="document.getElementById('modal-cmd').style.display='block';return false;">Cargar a CMD</a>
+        <a href="#" class="back-btn btn-ejecucion" id="btn-ejecucion">Ejecución Manual ETL</a>
+        <a href="#" class="back-btn btn-cmd" id="btn-cmd">Cargar a CMD</a>
         <table>
             <thead>
                 <tr>
@@ -78,12 +77,12 @@
                     <td>{% if proceso.en_ejecucion %}✔{% else %}✖{% endif %}</td>
                     <td>{{ proceso.registros }}</td>
                     <td>
-                        <a href="{% url 'etl_proceso_detalle' proceso.id %}" style="background:#0075C9;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;">Detalles</a>
+                        <a href="{% url 'etl_proceso_detalle' proceso.id %}" class="btn-detalles">Detalles</a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" style="text-align:center;">No hay procesos ETL registrados.</td>
+                    <td colspan="8" class="td-empty">No hay procesos ETL registrados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -91,36 +90,36 @@
         <a href="{% url 'home' %}" class="back-btn">Volver al Panel</a>
     </div>
 
-    <div id="modal-cmd" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:9999;">
-    <div style="background:#fff;max-width:400px;margin:80px auto;padding:32px 24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,117,201,0.12);position:relative;">
-        <h2 style="color:#0075C9;margin-bottom:18px;">Cargar archivo Excel a CMD</h2>
-        <form method="post" action="{% url 'cargar_excel_cmd' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label style="color:#0075C9;font-weight:500;">Selecciona archivo Excel:</label>
-            <input type="file" name="archivo" accept=".xlsx,.xls" required style="margin-bottom:18px;">
-            <div style="margin-top:18px;">
-                <button type="submit" style="background:#82BC00;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;margin-right:10px;">Cargar</button>
-                <button type="button" onclick="document.getElementById('modal-cmd').style.display='none';" style="background:#FF8300;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;">Cancelar</button>
-            </div>
-        </form>
-        <span style="position:absolute;top:12px;right:18px;cursor:pointer;font-size:1.5em;color:#0075C9;" onclick="document.getElementById('modal-cmd').style.display='none';">&times;</span>
+    <div id="modal-cmd" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Cargar archivo Excel a CMD</h2>
+            <form method="post" action="{% url 'cargar_excel_cmd' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <label class="modal-label">Selecciona archivo Excel:</label>
+                <input type="file" name="archivo" accept=".xlsx,.xls" required class="modal-input">
+                <div class="modal-actions">
+                    <button type="submit" class="btn-cargar">Cargar</button>
+                    <button type="button" class="btn-cancel" id="btn-cancel-cmd">Cancelar</button>
+                </div>
+            </form>
+            <span class="modal-close" id="close-cmd">&times;</span>
+        </div>
     </div>
-</div>
-<!-- Modal Ejecución Manual ETL -->
-<div id="modal-ejecucion" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:9999;">
-    <div style="background:#fff;max-width:400px;margin:80px auto;padding:32px 24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,117,201,0.12);position:relative;">
-        <h2 style="color:#0075C9;margin-bottom:18px;">¿Desea ejecutar el proceso ETL manualmente?</h2>
-        <form method="post" action="{% url 'ejecutar_etl_manual' %}">
-            {% csrf_token %}
-            <div style="margin-top:18px;">
-                <button type="submit" style="background:#82BC00;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;margin-right:10px;">Sí, ejecutar</button>
-                <button type="button" onclick="document.getElementById('modal-ejecucion').style.display='none';" style="background:#FF8300;color:#fff;padding:8px 18px;border:none;border-radius:5px;font-size:1em;cursor:pointer;">Cancelar</button>
-            </div>
-        </form>
-        <span style="position:absolute;top:12px;right:18px;cursor:pointer;font-size:1.5em;color:#0075C9;" onclick="document.getElementById('modal-ejecucion').style.display='none';">&times;</span>
+    <!-- Modal Ejecución Manual ETL -->
+    <div id="modal-ejecucion" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">¿Desea ejecutar el proceso ETL manualmente?</h2>
+            <form method="post" action="{% url 'ejecutar_etl_manual' %}">
+                {% csrf_token %}
+                <div class="modal-actions">
+                    <button type="submit" class="btn-ejecutar">Sí, ejecutar</button>
+                    <button type="button" class="btn-cancel" id="btn-cancel-ejecucion">Cancelar</button>
+                </div>
+            </form>
+            <span class="modal-close" id="close-ejecucion">&times;</span>
+        </div>
     </div>
-</div>
 
-</body>
     <script src="{% static 'js/etl_procesos_list.js' %}"></script>
+</body>
 </html>

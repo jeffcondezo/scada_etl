@@ -82,3 +82,119 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
         @keyframes fadeOut {
             to { opacity: 0; visibility: hidden; }
         }
+        .back-btn {
+            background: #0075C9;
+            margin-bottom: 18px;
+            color: #fff;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-detalles {
+            background: #0075C9;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-cargar, .btn-ejecutar {
+            background: #82BC00;
+            color: #fff;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .btn-cancel {
+            background: #FF8300;
+            color: #fff;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.25);
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: #fff;
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 32px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,117,201,0.12);
+            position: relative;
+        }
+
+        .modal-title {
+            color: #0075C9;
+            margin-bottom: 18px;
+        }
+
+        .modal-label {
+            color: #0075C9;
+            font-weight: 500;
+        }
+
+        .modal-input {
+            margin-bottom: 18px;
+        }
+
+        .modal-actions {
+            margin-top: 18px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 18px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: #0075C9;
+        }
+
+        .floating-message {
+            position: fixed;
+            top: 32px;
+            right: 32px;
+            z-index: 99999;
+            min-width: 280px;
+            max-width: 400px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-size: 1.08em;
+            box-shadow: 0 2px 12px rgba(0,117,201,0.12);
+            animation: fadeOut 0.5s ease-in-out 3s forwards;
+        }
+        .floating-success {
+            background: #82BC00;
+            color: #fff;
+        }
+        .floating-error {
+            background: #FF8300;
+            color: #fff;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+        .td-empty {
+            text-align: center;
+        }

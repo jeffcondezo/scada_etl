@@ -23,4 +23,37 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
             .main-content { padding: 24px 8px 16px 8px; }
             .sidebar { width: 100%; height: auto; position: static; }
             .main-content { margin-left: 0; }
+        .btn_ver_niveles {
+            background: #0075C9;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-right: 6px;
+        }
+        .btn_ver_niveles:hover {
+            background: #005999;
+        }
+        .btn_desactivar {
+            background: #FF8300;
+            color: #fff;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn_desactivar:hover {
+            background: #d96c00;
+        }
+        .btn_activar {
+            background: #82BC00;
+            color: #fff;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn_activar:hover {
+            background: #6fa600;
+        }
         }
