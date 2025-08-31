@@ -31,7 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-hmcej&(h_-jl68lpciv-3sf6unci=3fb9v$=3(@fy(mo0^v87$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['192.168.14.133', 'cmd.celepsa.com', '127.0.0.1']
 
