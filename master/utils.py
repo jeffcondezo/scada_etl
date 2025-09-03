@@ -228,6 +228,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     Exporta solo los datos de ScadaTemporal del día proporcionado por los parámetros fecha_inicio y fecha_fin
     a las tablas correspondientes en la base de datos SCADA en SQL Server.
     Si el registro con ese timestamp existe, actualiza los campos; si no existe, lo crea.
+    Solo inserta si al menos un sensor tiene valor (no None) en ese minuto.
     """
     contador_insert = 0
     server = settings.DB_SQL_SERVER
@@ -268,6 +269,10 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
         cabeceras = [c.replace(' ', '_') for c in cabeceras]
 
         for minuto, valores in datos_por_minuto.items():
+            # Validar que al menos un sensor esté completo (no None)
+            if not any(valores.get(c) is not None for c in cabeceras):
+                continue  # Omitir si todos son None
+
             # Verifica si el registro existe
             cursor.execute(f"SELECT COUNT(*) FROM [{nombre_tabla}] WHERE [timestamp]=?", minuto)
             existe = cursor.fetchone()[0] > 0
@@ -285,7 +290,7 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
                     print(f"Error actualizando en {nombre_tabla} para {minuto}: {e}")
             else:
                 # Inserta el registro nuevo
-                contador_insert +=1
+                contador_insert += 1
                 columnas_insert = ['timestamp'] + columnas
                 valores_insert = [minuto] + valores_update
                 placeholders = ','.join(['?'] * len(columnas_insert))
@@ -993,7 +998,7 @@ def ejecutar_etl_secuencial_cron():
     # Eliminar datos de ScadaTemporal con fecha menor a dos días antes de la fecha_base
     fecha_limite = fecha_base - timedelta(days=2)
     ScadaTemporal.objects.filter(timestamp__lt=fecha_limite).delete()
-    
+
 
 def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):
     """
