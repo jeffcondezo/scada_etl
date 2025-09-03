@@ -65,24 +65,31 @@
                     <input type="checkbox" name="bloqueado" {% if usuario.profile.bloqueado %}checked{% endif %}> Bloqueado
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_usuarios" {% if usuario.profile.acceso_usuarios %}checked{% endif %}> Acceso a Usuarios
+                    <input type="checkbox" name="acceso_usuarios" id="acceso_usuarios"
+                        {% if usuario.profile.acceso_usuarios %}checked{% endif %}> Acceso a Usuarios <!--(Administrador)-->
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_proceso_etl" {% if usuario.profile.acceso_proceso_etl %}checked{% endif %}> Acceso a Proceso ETL
+                    <input type="checkbox" name="acceso_proceso_etl" id="acceso_proceso_etl"
+                        {% if usuario.profile.acceso_proceso_etl %}checked{% endif %}> Acceso a Proceso ETL
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_sensores" {% if usuario.profile.acceso_sensores %}checked{% endif %}> Acceso a Sensores
+                    <input type="checkbox" name="acceso_sensores" id="acceso_sensores"
+                        {% if usuario.profile.acceso_sensores %}checked{% endif %}> Acceso a Sensores
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_configuracion" {% if usuario.profile.acceso_configuracion %}checked{% endif %}> Acceso a Configuración
+                    <input type="checkbox" name="acceso_configuracion" id="acceso_configuracion"
+                        {% if usuario.profile.acceso_configuracion %}checked{% endif %}> Acceso a Configuración
                 </label>
-
                 <div class="form-actions">
                     <button type="submit" class="save-btn">Guardar</button>
                     <a href="{% url 'usuarios_list' %}" class="cancel-btn">Cancelar</a>
                 </div>
             </form>
         </div>
+                <div id="admin-message" class="floating-message floating-success" style="display:none;">
+            Al dar acceso al módulo de Usuarios se le otorga el rango de Administrador al usuario
+        </div>
     </div>
+    <script src="{% static 'js/editar_usuario.js' %}"></script>
 </body>
 </html>

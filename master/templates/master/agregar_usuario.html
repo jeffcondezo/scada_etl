@@ -65,16 +65,16 @@
                     <input type="password" name="password" required>
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_usuarios"> Acceso a Usuarios
+                    <input type="checkbox" name="acceso_usuarios" id="acceso_usuarios"> Acceso a Usuarios <!--(Administrador)-->
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_proceso_etl"> Acceso a Proceso ETL
+                    <input type="checkbox" name="acceso_proceso_etl" id="acceso_proceso_etl"> Acceso a Proceso ETL
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_sensores"> Acceso a Sensores
+                    <input type="checkbox" name="acceso_sensores" id="acceso_sensores"> Acceso a Sensores
                 </label>
                 <label>
-                    <input type="checkbox" name="acceso_configuracion"> Acceso a Configuración
+                    <input type="checkbox" name="acceso_configuracion" id="acceso_configuracion"> Acceso a Configuración
                 </label>
                 <div class="form-actions">
                     <button type="submit" class="save-btn">Guardar</button>
@@ -82,4 +82,10 @@
                 </div>
             </form>
         </div>
+                <div id="admin-message" class="floating-message floating-success" style="display:none;">
+            Al dar acceso al módulo de Usuarios se le otorga el rango de Administrador al usuario
+        </div>
     </div>
+    <script src="{% static 'js/agregar_usuario.js' %}"></script>
+</body>
+</html>

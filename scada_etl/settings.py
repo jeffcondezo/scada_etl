@@ -31,7 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-hmcej&(h_-jl68lpciv-3sf6unci=3fb9v$=3(@fy(mo0^v87$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['192.168.14.133', 'cmd.celepsa.com', '127.0.0.1']
 
@@ -131,7 +131,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# Ruta absoluta a la carpeta static
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+# Si usas collectstatic para producción:
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -145,3 +151,5 @@ DB_SQL_DATABASE=env("DB_SQL_DATABASE")
 DB_SQL_DATABASE_SCADA=env("DB_SQL_DATABASE_SCADA")
 DB_SQL_USERNAME=env("DB_SQL_USERNAME")
 DB_SQL_PASSWORD=env("DB_SQL_PASSWORD")
+DB_DRIVER=env("DB_DRIVER")
+

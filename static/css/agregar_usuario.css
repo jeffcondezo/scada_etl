@@ -27,3 +27,21 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 
             .sidebar { width: 100%; height: auto; position: static; }
             .main-content { margin-left: 0; }
         }
+        .floating-message {
+            position: fixed;
+            top: 32px;
+            right: 32px;
+            z-index: 99999;
+            min-width: 280px;
+            max-width: 400px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-size: 1.08em;
+            box-shadow: 0 2px 12px rgba(0,117,201,0.12);
+            background: #82BC00;
+            color: #fff;
+            animation: fadeOut 0.5s ease-in-out 3s forwards;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }

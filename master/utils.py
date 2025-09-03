@@ -72,6 +72,7 @@ def crear_tabla_sqlserver_con_cabeceras():
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     central = Central.objects.all()
 
@@ -85,7 +86,7 @@ def crear_tabla_sqlserver_con_cabeceras():
         sql = f"CREATE TABLE [{nombre_tabla}] ({columnas_sql});"
 
         conn_str = (
-            "DRIVER={ODBC Driver 18 for SQL Server};"
+            f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
             f"SERVER={server};"
             f"DATABASE={database};"
             f"UID={username};"
@@ -125,9 +126,10 @@ def importar_valores_scada_desde_sqlserver(fecha_inicio, fecha_fin):
     database = settings.DB_SQL_DATABASE_SCADA
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -232,9 +234,10 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -310,9 +313,10 @@ def comparar_scadatemporal_con_sqlserver(fecha_inicio, fecha_fin):
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -413,9 +417,10 @@ def importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin):
     database = settings.DB_SQL_DATABASE_SCADA
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -489,9 +494,10 @@ def limpiar_scadatemporal_y_sqlserver():
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -536,9 +542,10 @@ def limpiar_historicaldata_ids_no_homologados():
     database = settings.DB_SQL_DATABASE_SCADA
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -666,9 +673,10 @@ def comparar_scadatemporal_con_sqlserver2(fecha_inicio, fecha_fin):
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
+    driver = settings.DB_DRIVER
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -819,9 +827,10 @@ def importar_excel_a_cmd(ruta_archivo):
     database = settings.DB_SQL_DATABASE
     username = settings.DB_SQL_USERNAME
     password = settings.DB_SQL_PASSWORD
-    
+    driver = settings.DB_DRIVER
+
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"DRIVER={{ODBC Driver {driver} for SQL Server}};"
         f"SERVER={server};"
         f"DATABASE={database};"
         f"UID={username};"
@@ -872,6 +881,7 @@ def ejecutar_etl_secuencial_cron():
     Almacena en ETLProcessStateCron la cantidad de registros exportados por exportar_scadatemporal_a_sqlserver.
     Guarda un registro en ETLProcessLogCron por cada etapa.
     No inicia si ya hay un registro en ejecución.
+    Al finalizar, elimina los datos de ScadaTemporal con fecha menor a dos días antes de la fecha_base.
     """
     try:
         fecha_base = Parametro.objects.get(pk=2).valor
@@ -884,7 +894,7 @@ def ejecutar_etl_secuencial_cron():
     from django.utils import timezone
     if timezone.is_naive(fecha_base):
         fecha_base = timezone.make_aware(fecha_base, timezone.get_current_timezone())
-        
+
     ahora = timezone.now()
     if fecha_base > ahora - timedelta(minutes=15):
         print("No se ejecuta porque la fecha_base no es suficientemente antigua.")
@@ -894,7 +904,7 @@ def ejecutar_etl_secuencial_cron():
     if ETLProcessStateCron.objects.filter(en_ejecucion=True).exists():
         print("Ya hay un proceso ETLProcessStateCron en ejecución. No se puede iniciar otro.")
         return
-
+    
     fecha_inicio = fecha_base - timedelta(minutes=15)
     fecha_fin = fecha_base + timedelta(minutes=15)
 
@@ -915,7 +925,7 @@ def ejecutar_etl_secuencial_cron():
         proceso=estado
     )
     try:
-        importar_valores_scada_desde_sqlserver2(fecha_inicio, fecha_fin)
+        importar_valores_scada_desde_sqlserver2(fecha_inicio + timedelta(hours=5), fecha_fin + timedelta(hours=5))
         log_importar.exito = True
         log_importar.mensaje = "Etapa importar finalizada correctamente"
     except Exception as e:
@@ -937,7 +947,7 @@ def ejecutar_etl_secuencial_cron():
         proceso=estado
     )
     try:
-        completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin)
+        completar_minutos_faltantes_scadatemporal3(fecha_inicio + timedelta(hours=5), fecha_fin + timedelta(hours=5))
         log_completar.exito = True
         log_completar.mensaje = "Etapa completar finalizada correctamente"
     except Exception as e:
@@ -959,10 +969,7 @@ def ejecutar_etl_secuencial_cron():
         proceso=estado
     )
     try:
-        # Restar 5 horas a fecha_inicio y fecha_fin antes de exportar
-        fecha_inicio_export = fecha_inicio - timedelta(hours=5)
-        fecha_fin_export = fecha_fin - timedelta(hours=5)
-        registros_exportados = exportar_scadatemporal_a_sqlserver(fecha_inicio_export, fecha_fin_export)
+        registros_exportados = exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin)
         estado.registros = registros_exportados
         estado.completado = True
         estado.en_ejecucion = False
@@ -983,6 +990,10 @@ def ejecutar_etl_secuencial_cron():
     log_exportar.save()
     estado.save()
 
+    # Eliminar datos de ScadaTemporal con fecha menor a dos días antes de la fecha_base
+    fecha_limite = fecha_base - timedelta(days=2)
+    ScadaTemporal.objects.filter(timestamp__lt=fecha_limite).delete()
+    
 
 def completar_minutos_faltantes_scadatemporal3(fecha_inicio, fecha_fin):
     """
