@@ -270,7 +270,8 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
 
         for minuto, valores in datos_por_minuto.items():
             # Validar que al menos un sensor esté completo (no None)
-            if not any(valores.get(c) is not None for c in cabeceras):
+            sensores_con_valor = [valores.get(c) for c in cabeceras if valores.get(c) is not None]
+            if not sensores_con_valor:
                 continue  # Omitir si todos son None
 
             # Verifica si el registro existe
@@ -289,16 +290,18 @@ def exportar_scadatemporal_a_sqlserver(fecha_inicio, fecha_fin):
                 except Exception as e:
                     print(f"Error actualizando en {nombre_tabla} para {minuto}: {e}")
             else:
-                # Inserta el registro nuevo
+                # Inserta el registro nuevo solo si hay al menos un valor
                 contador_insert += 1
                 columnas_insert = ['timestamp'] + columnas
                 valores_insert = [minuto] + valores_update
-                placeholders = ','.join(['?'] * len(columnas_insert))
-                sql = f"INSERT INTO [{nombre_tabla}] ({','.join('['+c+']' for c in columnas_insert)}) VALUES ({placeholders})"
-                try:
-                    cursor.execute(sql, *valores_insert)
-                except Exception as e:
-                    print(f"Error insertando en {nombre_tabla} para {minuto}: {e}")
+                # Validar que no sean todos None (además del timestamp)
+                if any(v is not None for v in valores_update):
+                    placeholders = ','.join(['?'] * len(columnas_insert))
+                    sql = f"INSERT INTO [{nombre_tabla}] ({','.join('['+c+']' for c in columnas_insert)}) VALUES ({placeholders})"
+                    try:
+                        cursor.execute(sql, *valores_insert)
+                    except Exception as e:
+                        print(f"Error insertando en {nombre_tabla} para {minuto}: {e}")
 
     conn.commit()
     cursor.close()
@@ -981,8 +984,22 @@ def ejecutar_etl_secuencial_cron():
         log_exportar.exito = True
         log_exportar.mensaje = f"Etapa exportar finalizada correctamente."
         # Actualiza la tabla parámetro con la nueva fecha_base (fecha_base + 15 minutos)
-        nuevo_valor = fecha_base + timedelta(minutes=15)
-        Parametro.objects.filter(pk=2).update(valor=nuevo_valor)
+        # Después de exportar
+        if registros_exportados > 0:
+            # Encuentra el último minuto exportado
+            ultimo_minuto = (
+                ScadaTemporal.objects.filter(
+                    timestamp_utc__range=(fecha_inicio, fecha_fin)
+                )
+                .order_by('-timestamp_utc')
+                .values_list('timestamp_utc', flat=True)
+                .first()
+            )
+            if ultimo_minuto:
+                nuevo_valor = ultimo_minuto + timedelta(minutes=1)
+                Parametro.objects.filter(pk=2).update(valor=nuevo_valor)
+        else:
+            print("No se extrajeron registros, fecha_base no se actualiza.")
     except Exception as e:
         log_exportar.exito = False
         log_exportar.mensaje = f"Error en exportar: {str(e)}"
