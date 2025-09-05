@@ -179,6 +179,10 @@ def agregar_usuario(request):
 @acceso_modulo_requerido('acceso_proceso_etl')
 def etl_procesos_list(request):
     procesos = ETLProcessStateCron.objects.all().order_by('-actualizado')
+    from datetime import timedelta
+    for p in procesos:
+        if p.actualizado:
+            p.actualizado = p.actualizado - timedelta(hours=5)
     return render(request, 'master/etl_procesos_list.html', {
         'procesos': procesos,
         'year': datetime.now().year,

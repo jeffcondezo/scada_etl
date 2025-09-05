@@ -61,6 +61,7 @@
                     <th>ID</th>
                     <th>Fecha Inicio</th>
                     <th>Fecha Fin</th>
+                    <th>Fecha Ejecución</th>
                     <th>Completado</th>
                     <th>En Ejecución</th>
                     <th>Registros</th>
@@ -71,8 +72,9 @@
                 {% for proceso in procesos %}
                 <tr>
                     <td>{{ proceso.id }}</td>
+                    <td>{{ proceso.actualizado }}</td>
+                    <td>{{ proceso.actualizado }}</td>
                     <td>{{ proceso.fecha_hora_inicio }}</td>
-                    <td>{{ proceso.fecha_hora_fin }}</td>
                     <td>{% if proceso.completado %}✔{% else %}✖{% endif %}</td>
                     <td>{% if proceso.en_ejecucion %}✔{% else %}✖{% endif %}</td>
                     <td>{{ proceso.registros }}</td>
