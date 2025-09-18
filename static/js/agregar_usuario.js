@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const accesoConfig = document.getElementById('acceso_configuracion');
     const adminMsg = document.getElementById('admin-message');
 
-   /* accesoUsuarios.addEventListener('change', function() {
+   accesoUsuarios.addEventListener('change', function() {
         if (accesoUsuarios.checked) {
             accesoProceso.checked = true;
             accesoSensores.checked = true;
@@ -15,5 +15,5 @@ document.addEventListener('DOMContentLoaded', function() {
                 adminMsg.style.display = 'none';
             }, 3500);
         }
-    });*/
+    });
 });
